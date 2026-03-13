@@ -1,0 +1,423 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1a1a1a;
+  color: #f0f0f0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ── Top bar ────────────────────────────────────────────── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #3a3a3a;
+  flex-shrink: 0;
+}
+
+.set-selector {
+  flex: 1;
+  background: #3a3a3a;
+  border: none;
+  color: #f0f0f0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.btn-new-set {
+  background: #4a90d9;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btn-open-grid {
+  background: #3a3a3a;
+  border: none;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* ── Progress bar ───────────────────────────────────────── */
+.progress-bar {
+  padding: 8px 16px;
+  background: #222;
+  flex-shrink: 0;
+}
+
+.progress-label {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.progress-track {
+  height: 6px;
+  background: #3a3a3a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #4a90d9;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* ── Main content ───────────────────────────────────────── */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+.capture-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Character label ────────────────────────────────────── */
+.char-label {
+  text-align: center;
+  padding: 10px 16px 4px;
+  flex-shrink: 0;
+}
+
+.char-display {
+  font-size: 40px;
+  font-weight: 300;
+  color: #fff;
+  letter-spacing: 2px;
+}
+
+.char-type {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* ── Canvas area ────────────────────────────────────────── */
+.canvas-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+}
+
+.capture-canvas {
+  background: white;
+  border-radius: 12px;
+  touch-action: none;
+  cursor: crosshair;
+  display: block;
+}
+
+/* ── Action buttons ─────────────────────────────────────── */
+.action-bar {
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px;
+  flex-shrink: 0;
+  background: #222;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-clear   { background: #3a3a3a; color: #ccc; }
+.btn-preview { background: #5a5a5a; color: #fff; }
+.btn-accept  { background: #34c759; color: #fff; }
+.btn-discard { background: #ff3b30; color: #fff; }
+
+/* ── Existing captures strip ────────────────────────────── */
+.captures-strip {
+  padding: 8px 16px 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+}
+
+.captures-label {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.captures-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.capture-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.capture-chip .play-btn {
+  background: none;
+  border: none;
+  color: #4a90d9;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+}
+
+.capture-chip .del-btn {
+  background: none;
+  border: none;
+  color: #ff3b30;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+}
+
+/* Quality dot */
+.quality-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.q-none  { background: #ff3b30; }
+.q-one   { background: #ff9f0a; }
+.q-good  { background: #34c759; }
+
+/* ── Character grid overlay ─────────────────────────────── */
+.char-grid-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.char-grid-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #3a3a3a;
+  gap: 12px;
+}
+
+.char-grid-header h2 { flex: 1; font-size: 18px; }
+
+.btn-close-grid {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.char-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+}
+
+.grid-section-label {
+  width: 100%;
+  font-size: 11px;
+  color: #888;
+  padding: 4px 0 2px;
+}
+
+.grid-cell {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #2a2a2a;
+  cursor: pointer;
+  border: 2px solid transparent;
+  gap: 2px;
+}
+
+.grid-cell.active { border-color: #4a90d9; }
+.grid-cell .glyph-char { font-size: 18px; }
+.grid-cell .glyph-dot  { width: 6px; height: 6px; border-radius: 50%; }
+
+/* ── Status toast ───────────────────────────────────────── */
+.status-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 200;
+}
+
+/* ── Error message ──────────────────────────────────────── */
+.error-msg {
+  color: #ff3b30;
+  font-size: 13px;
+  padding: 4px 16px;
+  text-align: center;
+}
+
+/* ── Empty state ────────────────────────────────────────── */
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 15px;
+}
+
+/* ── Glyph Roster ───────────────────────────────────────── */
+.glyph-roster {
+  width: 20%;
+  min-width: 90px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #161616;
+  border-left: 1px solid #242424;
+  overflow: hidden;
+}
+
+.roster-header {
+  padding: 7px 10px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #444;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.roster-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #2e2e2e transparent;
+}
+
+.roster-section-label {
+  padding: 8px 10px 3px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #333;
+}
+
+.roster-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px 5px 8px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.12s;
+  min-height: 46px;
+  overflow: hidden;
+}
+
+.roster-row:hover {
+  background: #1c1c1c;
+}
+
+.roster-row--active {
+  background: #192030;
+  border-left-color: #4a90d9;
+}
+
+.roster-char {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  color: #383838;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.roster-char--captured {
+  color: #c0c0c0;
+}
+
+.roster-thumbs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.roster-thumb {
+  flex-shrink: 0;
+  border-radius: 3px;
+  background: #212121;
+  display: block;
+}
+
+.roster-empty-dash {
+  color: #2c2c2c;
+  font-size: 12px;
+}

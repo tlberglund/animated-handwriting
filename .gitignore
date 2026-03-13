@@ -1,0 +1,7 @@
+capture-app/node_modules/
+capture-app/dist/
+backend/build/
+backend/bin/
+backend/.kotlin/
+
+

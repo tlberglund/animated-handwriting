@@ -1,0 +1,38 @@
+package com.animatedhandwriting.db
+
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import io.ktor.server.application.*
+import org.flywaydb.core.Flyway
+import org.jetbrains.exposed.sql.Database
+
+object DatabaseFactory {
+
+   fun init(environment: ApplicationEnvironment) {
+      val config = environment.config
+      val url      = config.property("database.url").getString()
+      val user     = config.property("database.user").getString()
+      val password = config.property("database.password").getString()
+
+      val hikariConfig = HikariConfig().apply {
+         jdbcUrl         = url
+         username        = user
+         this.password   = password
+         driverClassName = "org.postgresql.Driver"
+         maximumPoolSize = 10
+         isAutoCommit    = false
+         transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+         validate()
+      }
+
+      val dataSource = HikariDataSource(hikariConfig)
+
+      Flyway.configure()
+         .dataSource(dataSource)
+         .locations("classpath:db/migration")
+         .load()
+         .migrate()
+
+      Database.connect(dataSource)
+   }
+}

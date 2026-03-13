@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(openspec new:*)",
+      "Bash(ls capture-app/ && cat capture-app/**/* 2>/dev/null | head -100 || ls -la capture-app/)",
+      "Bash(openspec status:*)",
+      "Bash(openspec instructions:*)",
+      "Bash(cd /Users/tlberglund/code/animated-handwriting/capture-app && npm install 2>&1)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(cd /Users/tlberglund/code/animated-handwriting/backend && ./gradlew run 2>&1 | tail -50)",
+      "Bash(./gradlew compileKotlin 2>&1 | tail -30)",
+      "Bash(./gradlew compileKotlin 2>&1 | tail -20)",
+      "Bash(find /Users/tlberglund/code/animated-handwriting/backend/src/main/resources -type f | xargs ls -la 2>/dev/null; find /Users/tlberglund/code/animated-handwriting/backend -name \"*.conf\" -o -name \"*.yaml\" -o -name \"*.yml\" -o -name \"*.env\" | head -10)",
+      "Bash(ps aux:*)",
+      "Read(//usr/local/var/**)",
+      "Read(//opt/homebrew/var/**)",
+      "Bash(openspec list:*)"
+    ]
+  }
+}
