@@ -77,7 +77,7 @@ export default function GlyphRoster({ captureSetId, currentChar, onNavigate }: P
                     className={`roster-row${isActive ? ' roster-row--active' : ''}`}
                     onClick={() => onNavigate(glyph.character)}
                   >
-                    <span className={`roster-char${hasCaps ? ' roster-char--captured' : ''}`}>
+                    <span className="roster-char">
                       {glyph.character.length > 2
                         ? glyph.character.slice(0, 2)
                         : glyph.character}

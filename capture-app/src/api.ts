@@ -43,6 +43,13 @@ export const api = {
       `/capture-sets/${setId}/glyphs/${encodeURIComponent(char)}/captures/${captureId}`,
     ),
 
+  setDefaultCapture: (setId: string, char: string, captureId: string) =>
+    req<void>(
+      'PUT',
+      `/capture-sets/${setId}/glyphs/${encodeURIComponent(char)}/default-capture`,
+      { captureId },
+    ),
+
   exportGlyphSet: (setId: string) =>
     req<GlyphSet>('GET', `/capture-sets/${setId}/export`),
 }

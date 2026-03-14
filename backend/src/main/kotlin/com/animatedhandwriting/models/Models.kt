@@ -46,7 +46,13 @@ data class GlyphDetail(
    val id: String,
    val character: String,
    val glyphType: String,
+   val defaultCaptureId: String?,
    val captures: List<GlyphCaptureResponse>
+)
+
+@Serializable
+data class SetDefaultCaptureRequest(
+   val captureId: String
 )
 
 // ── Glyph Capture ─────────────────────────────────────────────────────────────

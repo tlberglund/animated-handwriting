@@ -6,21 +6,27 @@ const BASELINE_FRAC   = 0.75
 const MIN_STROKE_PX   = 2
 const MAX_STROKE_PX   = 4
 
-type Mode = 'capture' | 'preview' | 'post-preview'
+export type Mode = 'capture' | 'preview' | 'post-preview'
 
 export interface CaptureCanvasHandle {
-  playCapture: (strokes: Stroke[][]) => void
+  playCapture: (strokes: Stroke[][], sourceMeta: CanvasMeta) => void
+  clear:       () => void
+  preview:     () => void
+  accept:      () => void
+  discard:     () => void
+  hasStrokes:  () => boolean
 }
 
 interface Props {
-  onCapture: (strokes: Stroke[][], canvasMeta: CanvasMeta) => void
-  disabled?: boolean
+  onCapture:      (strokes: Stroke[][], canvasMeta: CanvasMeta) => void
+  onModeChange?:  (mode: Mode) => void
+  disabled?:      boolean
   referenceStrokes?: Stroke[][] | null
-  referenceMeta?: CanvasMeta | null
+  referenceMeta?:    CanvasMeta | null
 }
 
 export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function CaptureCanvas(
-  { onCapture, disabled = false, referenceStrokes, referenceMeta },
+  { onCapture, onModeChange, disabled = false, referenceStrokes, referenceMeta },
   ref,
 ) {
   const canvasEl    = useRef<HTMLCanvasElement>(null)
@@ -39,6 +45,11 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
 
   const [mode, setMode] = useState<Mode>('capture')
   modeRef.current = mode
+
+  function setModeAndNotify(m: Mode) {
+    setMode(m)
+    onModeChange?.(m)
+  }
 
   // ── Canvas geometry ──────────────────────────────────────────────────────
   function logicalW(canvas: HTMLCanvasElement) { return canvas.width  / window.devicePixelRatio }
@@ -118,17 +129,21 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
   }
 
   // ── Stroke drawing ───────────────────────────────────────────────────────
-  function drawSegment(canvas: HTMLCanvasElement, prev: Stroke, curr: Stroke) {
+  function drawAt(canvas: HTMLCanvasElement, x1: number, y1: number, x2: number, y2: number, pressure: number) {
     const ctx = canvas.getContext('2d')!
     ctx.lineCap     = 'round'
     ctx.lineJoin    = 'round'
     ctx.strokeStyle = '#1a1a1a'
-    ctx.lineWidth   = MIN_STROKE_PX + curr.p * (MAX_STROKE_PX - MIN_STROKE_PX)
+    ctx.lineWidth   = MIN_STROKE_PX + pressure * (MAX_STROKE_PX - MIN_STROKE_PX)
     ctx.setLineDash([])
     ctx.beginPath()
-    ctx.moveTo(prev.x, prev.y)
-    ctx.lineTo(curr.x, curr.y)
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
     ctx.stroke()
+  }
+
+  function drawSegment(canvas: HTMLCanvasElement, prev: Stroke, curr: Stroke) {
+    drawAt(canvas, prev.x, prev.y, curr.x, curr.y, curr.p)
   }
 
   function redrawStrokes(canvas: HTMLCanvasElement) {
@@ -143,13 +158,11 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
     if(!canvas) return
     const wrapper = canvas.parentElement
     if(!wrapper) return
-    const avail   = Math.min(wrapper.clientWidth - 32, wrapper.clientHeight - 24)
-    const w       = Math.round(avail * 1.4)
-    const h       = Math.round(avail)
-    canvas.width  = w * window.devicePixelRatio
-    canvas.height = h * window.devicePixelRatio
-    canvas.style.width  = w + 'px'
-    canvas.style.height = h + 'px'
+    const size    = wrapper.clientWidth - 8
+    canvas.width  = size * window.devicePixelRatio
+    canvas.height = size * window.devicePixelRatio
+    canvas.style.width  = size + 'px'
+    canvas.style.height = size + 'px'
     const ctx = canvas.getContext('2d')!
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
     drawGuides(canvas)
@@ -157,7 +170,7 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
   }
 
   // ── Preview animation ────────────────────────────────────────────────────
-  function runPreview(strokes: Stroke[][], onDone: () => void) {
+  function runPreview(strokes: Stroke[][], onDone: () => void, sourceMeta?: CanvasMeta) {
     const canvas    = canvasEl.current
     if(!canvas) return
     const allPoints = strokes.flatMap(s => s)
@@ -166,6 +179,22 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
     drawGuides(canvas)
 
     if(rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+
+    // Build coordinate transform: scale+center stored strokes onto the current canvas,
+    // using the same math as drawGhost so replayed strokes land exactly on the ghost.
+    let tx: (x: number) => number = x => x
+    let ty: (y: number) => number = y => y
+    if(sourceMeta) {
+      const curCapH = capHeightPx(canvas)
+      const curBase = baselinePx(canvas)
+      const yScale  = (curBase - curCapH) / (sourceMeta.baselineY - sourceMeta.capHeightY)
+      const minX    = allPoints.length > 0 ? Math.min(...allPoints.map(p => p.x)) : 0
+      const maxX    = allPoints.length > 0 ? Math.max(...allPoints.map(p => p.x)) : 0
+      const scaledW = (maxX - minX) * yScale
+      const xOff    = (logicalW(canvas) - scaledW) / 2 - minX * yScale
+      tx = x => x * yScale + xOff
+      ty = y => curCapH + (y - sourceMeta.capHeightY) * yScale
+    }
 
     let strokeIdx = 0
     let pointIdx  = 0
@@ -180,7 +209,10 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
         if(pointIdx >= stroke.length) { strokeIdx++; pointIdx = 0; continue }
         const pt = stroke[pointIdx]!
         if(pt.t - tOffset > elapsed) break
-        if(pointIdx > 0) drawSegment(canvas!, stroke[pointIdx - 1]!, pt)
+        if(pointIdx > 0) {
+          const prev = stroke[pointIdx - 1]!
+          drawAt(canvas!, tx(prev.x), ty(prev.y), tx(pt.x), ty(pt.y), pt.p)
+        }
         pointIdx++
       }
       rafRef.current = requestAnimationFrame(step)
@@ -191,9 +223,42 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
 
   // ── Imperative handle ────────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
-    playCapture(strokes: Stroke[][]) {
+    playCapture(strokes: Stroke[][], sourceMeta: CanvasMeta) {
       if(rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-      runPreview(strokes, () => {})
+      runPreview(strokes, () => {}, sourceMeta)
+    },
+    clear() {
+      if(rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+      strokesRef.current = []
+      currentRef.current = []
+      setModeAndNotify('capture')
+      if(canvasEl.current) drawGuides(canvasEl.current)
+    },
+    preview() {
+      if(strokesRef.current.length === 0) return
+      if(rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      setModeAndNotify('preview')
+      runPreview(strokesRef.current, () => setModeAndNotify('post-preview'))
+    },
+    accept() {
+      const canvas = canvasEl.current
+      if(!canvas || strokesRef.current.length === 0) return
+      onCapture(strokesRef.current, {
+        frameWidth:  logicalW(canvas),
+        frameHeight: logicalH(canvas),
+        capHeightY:  capHeightPx(canvas),
+        baselineY:   baselinePx(canvas),
+      })
+    },
+    discard() {
+      if(rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+      strokesRef.current = []
+      currentRef.current = []
+      setModeAndNotify('capture')
+      if(canvasEl.current) drawGuides(canvasEl.current)
+    },
+    hasStrokes() {
+      return strokesRef.current.length > 0
     },
   }))
 
@@ -278,56 +343,10 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
     return () => { if(rafRef.current !== null) cancelAnimationFrame(rafRef.current) }
   }, [])
 
-  // ── Button handlers ──────────────────────────────────────────────────────
-  function handleClear() {
-    if(rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
-    strokesRef.current = []
-    currentRef.current = []
-    setMode('capture')
-    if(canvasEl.current) drawGuides(canvasEl.current)
-  }
-
-  function handlePreview() {
-    if(strokesRef.current.length === 0) return
-    if(rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    setMode('preview')
-    runPreview(strokesRef.current, () => setMode('post-preview'))
-  }
-
-  function handleAccept() {
-    const canvas = canvasEl.current
-    if(!canvas || strokesRef.current.length === 0) return
-    onCapture(strokesRef.current, {
-      frameWidth:  logicalW(canvas),
-      frameHeight: logicalH(canvas),
-      capHeightY:  capHeightPx(canvas),
-      baselineY:   baselinePx(canvas),
-    })
-  }
-
-  function handleDiscard() {
-    if(rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
-    strokesRef.current = []
-    currentRef.current = []
-    setMode('capture')
-    if(canvasEl.current) drawGuides(canvasEl.current)
-  }
-
   // ── Render ───────────────────────────────────────────────────────────────
-  const isCap  = mode === 'capture'
-  const isPost = mode === 'post-preview'
-
   return (
-    <>
-      <div className="canvas-wrapper">
-        <canvas ref={canvasEl} className="capture-canvas" />
-      </div>
-      <div className="action-bar">
-        {isCap  && <button className="action-btn btn-clear"   onClick={handleClear}   disabled={disabled}>Clear</button>}
-        {isCap  && <button className="action-btn btn-preview" onClick={handlePreview} disabled={disabled}>Preview</button>}
-        {isPost && <button className="action-btn btn-accept"  onClick={handleAccept}  disabled={disabled}>Accept ✓</button>}
-        {isPost && <button className="action-btn btn-discard" onClick={handleDiscard} disabled={disabled}>Discard ✗</button>}
-      </div>
-    </>
+    <div className="canvas-wrapper">
+      <canvas ref={canvasEl} className="capture-canvas" />
+    </div>
   )
 })

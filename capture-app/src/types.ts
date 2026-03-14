@@ -38,6 +38,7 @@ export interface GlyphDetail {
   id: string
   character: string
   glyphType: string
+  defaultCaptureId: string | null
   captures: GlyphCapture[]
 }
 

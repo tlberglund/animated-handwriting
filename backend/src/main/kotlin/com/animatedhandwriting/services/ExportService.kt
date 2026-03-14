@@ -12,14 +12,14 @@ object ExportService {
    private val json = Json { ignoreUnknownKeys = true }
 
    fun export(captureSetId: UUID): ExportResponse? = transaction {
-      val setRow = CaptureSets.select { CaptureSets.id eq captureSetId }
+      val setRow = CaptureSets.selectAll().where { CaptureSets.id eq captureSetId }
          .singleOrNull() ?: return@transaction null
 
-      val glyphs = Glyphs.select { Glyphs.captureSetId eq captureSetId }.toList()
+      val glyphs = Glyphs.selectAll().where { Glyphs.captureSetId eq captureSetId }.toList()
       val glyphIds = glyphs.map { it[Glyphs.id] }
 
       val capturesByGlyphId = GlyphCaptures
-         .select { GlyphCaptures.glyphId inList glyphIds }
+         .selectAll().where { GlyphCaptures.glyphId inList glyphIds }
          .groupBy { it[GlyphCaptures.glyphId] }
 
       val exportGlyphs = mutableMapOf<String, ExportGlyph>()

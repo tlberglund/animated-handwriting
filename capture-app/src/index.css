@@ -102,6 +102,31 @@ body {
   overflow: hidden;
 }
 
+/* ── Capture area row (canvas left, controls right) ─────── */
+.capture-area-row {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.canvas-zone {
+  width: 26vw;
+  min-width: 156px;
+  max-width: 416px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 8px 0 12px;
+}
+
+.dead-zone {
+  flex: 1;
+  pointer-events: none;
+}
+
 /* ── Character label ────────────────────────────────────── */
 .char-label {
   text-align: center;
@@ -124,11 +149,7 @@ body {
 
 /* ── Canvas area ────────────────────────────────────────── */
 .canvas-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 16px;
+  width: 100%;
 }
 
 .capture-canvas {
@@ -142,18 +163,18 @@ body {
 /* ── Action buttons ─────────────────────────────────────── */
 .action-bar {
   display: flex;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 8px;
+  padding: 8px 0;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
-  background: #222;
 }
 
 .action-btn {
   flex: 1;
-  padding: 14px;
+  padding: 9px;
   border: none;
-  border-radius: 10px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -168,53 +189,97 @@ body {
 .btn-accept  { background: #34c759; color: #fff; }
 .btn-discard { background: #ff3b30; color: #fff; }
 
-/* ── Existing captures strip ────────────────────────────── */
-.captures-strip {
-  padding: 8px 16px 16px;
-  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
-  flex-shrink: 0;
+/* ── Captures area (tiles) ──────────────────────────────── */
+.captures-area {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 8px 8px 8px 0;
 }
 
 .captures-label {
   font-size: 12px;
   color: #888;
-  margin-bottom: 6px;
-}
-
-.captures-list {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.capture-chip {
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+}
+
+.captures-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.capture-tile {
+  position: relative;
+  width: 80px;
+  height: 100px;
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.capture-chip .play-btn {
-  background: none;
-  border: none;
-  color: #4a90d9;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 2px;
+  overflow: hidden;
+  transition: border-color 0.12s, background 0.12s;
 }
 
-.capture-chip .del-btn {
-  background: none;
-  border: none;
+.capture-tile:hover {
+  border-color: #4a90d9;
+  background: #252e3e;
+}
+
+.capture-tile-ref {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(52,199,89,0.4);
+  border-radius: 50%;
+  color: #34c759;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.capture-tile-ref--active {
+  opacity: 1;
+  background: rgba(52,199,89,0.15);
+  border-color: #34c759;
+}
+
+.capture-tile-del {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,59,48,0.5);
+  border-radius: 50%;
   color: #ff3b30;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 2px;
+  padding: 0;
+  line-height: 1;
 }
+
+.capture-tile-del:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 
 /* Quality dot */
 .quality-dot {
@@ -233,7 +298,7 @@ body {
 .char-grid-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: #1a1a1a;
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -392,13 +457,9 @@ body {
   width: 20px;
   text-align: center;
   flex-shrink: 0;
-  color: #383838;
+  color: #c0c0c0;
   line-height: 1;
   font-weight: 500;
-}
-
-.roster-char--captured {
-  color: #c0c0c0;
 }
 
 .roster-thumbs {

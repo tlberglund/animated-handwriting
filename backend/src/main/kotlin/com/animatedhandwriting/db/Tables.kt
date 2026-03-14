@@ -31,10 +31,11 @@ object CaptureSetOverrides : Table("capture_set_override") {
 }
 
 object Glyphs : Table("glyph") {
-   val id            = uuid("id").autoGenerate()
-   val captureSetId  = uuid("capture_set_id") references CaptureSets.id
-   val character     = varchar("character", 10)
-   val glyphType     = varchar("glyph_type", 20)
+   val id                = uuid("id").autoGenerate()
+   val captureSetId      = uuid("capture_set_id") references CaptureSets.id
+   val character         = varchar("character", 10)
+   val glyphType         = varchar("glyph_type", 20)
+   val defaultCaptureId  = uuid("default_capture_id").nullable()
 
    override val primaryKey = PrimaryKey(id)
 }

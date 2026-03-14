@@ -16,14 +16,17 @@ object GlyphService {
 
    fun listGlyphs(captureSetId: UUID): List<GlyphSummary> = transaction {
       val counts = GlyphCaptures
-         .slice(GlyphCaptures.glyphId, GlyphCaptures.id.count())
-         .select { GlyphCaptures.glyphId inList
-            Glyphs.select { Glyphs.captureSetId eq captureSetId }.map { it[Glyphs.id] }
+         .select(GlyphCaptures.glyphId, GlyphCaptures.id.count())
+         .where { GlyphCaptures.glyphId inList
+            Glyphs.selectAll().where { Glyphs.captureSetId eq captureSetId }.map { it[Glyphs.id] }
          }
          .groupBy(GlyphCaptures.glyphId)
          .associate { it[GlyphCaptures.glyphId] to it[GlyphCaptures.id.count()].toInt() }
 
-      Glyphs.select { Glyphs.captureSetId eq captureSetId }
+      val sortOrders = CharacterDefinitions.selectAll()
+         .associate { it[CharacterDefinitions.character] to it[CharacterDefinitions.sortOrder] }
+
+      Glyphs.selectAll().where { Glyphs.captureSetId eq captureSetId }
          .map {
             GlyphSummary(
                id           = it[Glyphs.id].toString(),
@@ -32,15 +35,16 @@ object GlyphService {
                captureCount = counts[it[Glyphs.id]] ?: 0
             )
          }
+         .sortedBy { sortOrders[it.character] ?: Int.MAX_VALUE }
    }
 
    fun getGlyph(captureSetId: UUID, character: String): GlyphDetail? = transaction {
-      val glyphRow = Glyphs.select {
+      val glyphRow = Glyphs.selectAll().where {
          (Glyphs.captureSetId eq captureSetId) and (Glyphs.character eq character)
       }.singleOrNull() ?: return@transaction null
 
       val captures = GlyphCaptures
-         .select { GlyphCaptures.glyphId eq glyphRow[Glyphs.id] }
+         .selectAll().where { GlyphCaptures.glyphId eq glyphRow[Glyphs.id] }
          .orderBy(GlyphCaptures.capturedAt)
          .map { row ->
             GlyphCaptureResponse(
@@ -53,15 +57,16 @@ object GlyphService {
          }
 
       GlyphDetail(
-         id        = glyphRow[Glyphs.id].toString(),
-         character = glyphRow[Glyphs.character],
-         glyphType = glyphRow[Glyphs.glyphType],
-         captures  = captures
+         id               = glyphRow[Glyphs.id].toString(),
+         character        = glyphRow[Glyphs.character],
+         glyphType        = glyphRow[Glyphs.glyphType],
+         defaultCaptureId = glyphRow[Glyphs.defaultCaptureId]?.toString(),
+         captures         = captures
       )
    }
 
    fun addCapture(captureSetId: UUID, character: String, request: CreateCaptureRequest): GlyphCaptureResponse? = transaction {
-      val glyphRow = Glyphs.select {
+      val glyphRow = Glyphs.selectAll().where {
          (Glyphs.captureSetId eq captureSetId) and (Glyphs.character eq character)
       }.singleOrNull() ?: return@transaction null
 
@@ -73,7 +78,7 @@ object GlyphService {
          it[notes]      = request.notes
       } get GlyphCaptures.id
 
-      GlyphCaptures.select { GlyphCaptures.id eq captureId }
+      GlyphCaptures.selectAll().where { GlyphCaptures.id eq captureId }
          .single()
          .let { row ->
             GlyphCaptureResponse(
@@ -86,8 +91,24 @@ object GlyphService {
          }
    }
 
+   fun setDefaultCapture(captureSetId: UUID, character: String, captureId: UUID): Boolean = transaction {
+      val glyphRow = Glyphs.selectAll().where {
+         (Glyphs.captureSetId eq captureSetId) and (Glyphs.character eq character)
+      }.singleOrNull() ?: return@transaction false
+
+      val captureExists = GlyphCaptures.selectAll().where {
+         (GlyphCaptures.id eq captureId) and (GlyphCaptures.glyphId eq glyphRow[Glyphs.id])
+      }.count() > 0
+      if(!captureExists) return@transaction false
+
+      Glyphs.update({ Glyphs.id eq glyphRow[Glyphs.id] }) {
+         it[defaultCaptureId] = captureId
+      }
+      true
+   }
+
    fun deleteCapture(captureSetId: UUID, character: String, captureId: UUID): Boolean = transaction {
-      val glyphRow = Glyphs.select {
+      val glyphRow = Glyphs.selectAll().where {
          (Glyphs.captureSetId eq captureSetId) and (Glyphs.character eq character)
       }.singleOrNull() ?: return@transaction false
 

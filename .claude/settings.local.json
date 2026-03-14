@@ -15,7 +15,13 @@
       "Bash(ps aux:*)",
       "Read(//usr/local/var/**)",
       "Read(//opt/homebrew/var/**)",
-      "Bash(openspec list:*)"
+      "Bash(openspec list:*)",
+      "Bash(cd /Users/tlberglund/code/animated-handwriting/backend && ./gradlew compileKotlin 2>&1 | grep -E \"^\\(e:|w:|BUILD\\)\")",
+      "mcp__paper__get_basic_info",
+      "mcp__paper__create_artboard",
+      "mcp__paper__write_html",
+      "mcp__paper__get_screenshot",
+      "mcp__paper__finish_working_on_nodes"
     ]
   }
 }

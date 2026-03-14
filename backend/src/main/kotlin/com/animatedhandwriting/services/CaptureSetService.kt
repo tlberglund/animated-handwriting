@@ -17,7 +17,7 @@ object CaptureSetService {
    }
 
    fun findById(id: UUID): CaptureSetResponse? = transaction {
-      CaptureSets.select { CaptureSets.id eq id }
+      CaptureSets.selectAll().where { CaptureSets.id eq id }
          .singleOrNull()
          ?.toCaptureSetResponse()
    }
@@ -39,7 +39,7 @@ object CaptureSetService {
          }
       }
 
-      CaptureSets.select { CaptureSets.id eq setId }
+      CaptureSets.selectAll().where { CaptureSets.id eq setId }
          .single()
          .toCaptureSetResponse()
    }
@@ -50,7 +50,7 @@ object CaptureSetService {
          request.description?.let { d -> it[description] = d }
       }
       if(updated == 0) null
-      else CaptureSets.select { CaptureSets.id eq id }.single().toCaptureSetResponse()
+      else CaptureSets.selectAll().where { CaptureSets.id eq id }.single().toCaptureSetResponse()
    }
 
    fun delete(id: UUID): Boolean = transaction {
@@ -58,13 +58,13 @@ object CaptureSetService {
    }
 
    fun getProgress(captureSetId: UUID): ProgressResponse = transaction {
-      val glyphs = Glyphs.select { Glyphs.captureSetId eq captureSetId }
+      val glyphs = Glyphs.selectAll().where { Glyphs.captureSetId eq captureSetId }
          .orderBy(Glyphs.character)
          .toList()
 
       val captureCountsByGlyphId = GlyphCaptures
-         .slice(GlyphCaptures.glyphId, GlyphCaptures.id.count())
-         .select { GlyphCaptures.glyphId inList glyphs.map { it[Glyphs.id] } }
+         .select(GlyphCaptures.glyphId, GlyphCaptures.id.count())
+         .where { GlyphCaptures.glyphId inList glyphs.map { it[Glyphs.id] } }
          .groupBy(GlyphCaptures.glyphId)
          .associate { it[GlyphCaptures.glyphId] to it[GlyphCaptures.id.count()].toInt() }
 
@@ -108,7 +108,7 @@ object CaptureSetService {
          .toMutableList()
 
       val overrides = CaptureSetOverrides
-         .select { CaptureSetOverrides.captureSetId eq captureSetId }
+         .selectAll().where { CaptureSetOverrides.captureSetId eq captureSetId }
          .map { it[CaptureSetOverrides.character] to it[CaptureSetOverrides.overrideType] }
 
       val excludes = overrides.filter { it.second == OverrideType.EXCLUDE.name }.map { it.first }.toSet()
