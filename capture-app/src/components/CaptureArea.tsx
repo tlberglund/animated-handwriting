@@ -134,6 +134,13 @@ export default function CaptureArea({ captureSetId, char }: Props) {
           referenceMeta={reference?.canvasMeta}
         />
 
+        <div className="action-bar">
+          {isCap  && <button className="action-btn btn-preview" onClick={() => canvasRef.current?.preview()} disabled={isBusy}>Preview</button>}
+          {isCap  && <button className="action-btn btn-clear"   onClick={() => canvasRef.current?.clear()}   disabled={isBusy}>Clear</button>}
+          {isPost && <button className="action-btn btn-accept"  onClick={() => canvasRef.current?.accept()}  disabled={isBusy}>Accept ✓</button>}
+          {isPost && <button className="action-btn btn-discard" onClick={() => canvasRef.current?.discard()} disabled={isBusy}>Discard ✗</button>}
+        </div>
+
         <div className="char-label">
           <div className="char-display">{char}</div>
           <div className="char-type">{glyphDetail?.glyphType ?? ''}</div>
@@ -174,12 +181,6 @@ export default function CaptureArea({ captureSetId, char }: Props) {
           </div>
         </div>
 
-        <div className="action-bar">
-          {isCap  && <button className="action-btn btn-clear"   onClick={() => canvasRef.current?.clear()}   disabled={isBusy}>Clear</button>}
-          {isCap  && <button className="action-btn btn-preview" onClick={() => canvasRef.current?.preview()} disabled={isBusy}>Preview</button>}
-          {isPost && <button className="action-btn btn-accept"  onClick={() => canvasRef.current?.accept()}  disabled={isBusy}>Accept ✓</button>}
-          {isPost && <button className="action-btn btn-discard" onClick={() => canvasRef.current?.discard()} disabled={isBusy}>Discard ✗</button>}
-        </div>
       </div>
 
       {/* Dead zone — hand rest area, no controls */}

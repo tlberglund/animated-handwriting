@@ -32,8 +32,9 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
   const canvasEl    = useRef<HTMLCanvasElement>(null)
   const strokesRef  = useRef<Stroke[][]>([])
   const currentRef  = useRef<Stroke[]>([])
-  const isDrawing   = useRef(false)
-  const sessionStart= useRef(0)
+  const isDrawing        = useRef(false)
+  const activePointerId  = useRef<number | null>(null)
+  const sessionStart     = useRef(0)
   const rafRef      = useRef<number | null>(null)
   const modeRef     = useRef<Mode>('capture')
 
@@ -196,19 +197,25 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
       ty = y => curCapH + (y - sourceMeta.capHeightY) * yScale
     }
 
-    let strokeIdx = 0
-    let pointIdx  = 0
-    const tOffset   = allPoints[0]!.t
-    const startTime = performance.now()
+    let strokeIdx        = 0
+    let pointIdx         = 0
+    let strokeStartElapsed = 0  // wall-clock offset at which the current stroke begins
+    const startTime      = performance.now()
 
     function step(now: number) {
       const elapsed = now - startTime
       while(true) {
         if(strokeIdx >= strokes.length) { onDone(); return }
         const stroke = strokes[strokeIdx]!
-        if(pointIdx >= stroke.length) { strokeIdx++; pointIdx = 0; continue }
+        if(pointIdx >= stroke.length) {
+          // Advance to next stroke immediately after the previous one ends.
+          // Each stroke's t is relative to its own start (0-based), so the
+          // duration is simply the last point's t value.
+          strokeStartElapsed += stroke.length > 0 ? stroke[stroke.length - 1]!.t : 0
+          strokeIdx++; pointIdx = 0; continue
+        }
         const pt = stroke[pointIdx]!
-        if(pt.t - tOffset > elapsed) break
+        if(strokeStartElapsed + pt.t > elapsed) break
         if(pointIdx > 0) {
           const prev = stroke[pointIdx - 1]!
           drawAt(canvas!, tx(prev.x), ty(prev.y), tx(pt.x), ty(pt.y), pt.p)
@@ -229,8 +236,10 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
     },
     clear() {
       if(rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
-      strokesRef.current = []
-      currentRef.current = []
+      strokesRef.current  = []
+      currentRef.current  = []
+      isDrawing.current   = false
+      activePointerId.current = null
       setModeAndNotify('capture')
       if(canvasEl.current) drawGuides(canvasEl.current)
     },
@@ -252,8 +261,10 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
     },
     discard() {
       if(rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
-      strokesRef.current = []
-      currentRef.current = []
+      strokesRef.current  = []
+      currentRef.current  = []
+      isDrawing.current   = false
+      activePointerId.current = null
       setModeAndNotify('capture')
       if(canvasEl.current) drawGuides(canvasEl.current)
     },
@@ -268,34 +279,64 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
     if(!canvas) return
 
     function onPointerDown(e: PointerEvent) {
-      if(modeRef.current !== 'capture') return
+      if(e.pointerType === 'touch') return  // ignore palm / finger
       e.preventDefault()
+      if(modeRef.current !== 'capture') return
       canvas!.setPointerCapture(e.pointerId)
-      if(strokesRef.current.length === 0) sessionStart.current = e.timeStamp
+      activePointerId.current = e.pointerId
+      sessionStart.current = e.timeStamp
       isDrawing.current  = true
       currentRef.current = []
       recordPoint(e)
     }
 
     function onPointerMove(e: PointerEvent) {
-      if(!isDrawing.current || modeRef.current !== 'capture') return
+      if(e.pointerType === 'touch') return
+      if(modeRef.current !== 'capture') return
+
+      // Safari/iPadOS sometimes skips pointerdown for rapid Pencil strokes and
+      // fires pointermove with buttons=1 instead. Treat it as a stroke start.
+      if(!isDrawing.current && e.buttons === 1) {
+        e.preventDefault()
+        canvas!.setPointerCapture(e.pointerId)
+        activePointerId.current = e.pointerId
+        sessionStart.current = e.timeStamp
+        isDrawing.current  = true
+        currentRef.current = []
+        recordPoint(e)
+        return
+      }
+
+      if(e.pointerId !== activePointerId.current) return
+      if(!isDrawing.current) return
       e.preventDefault()
       const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]
       for(const ev of events) recordPoint(ev)
     }
 
     function onPointerUp(e: PointerEvent) {
-      if(!isDrawing.current) return
+      if(e.pointerId !== activePointerId.current) return
       e.preventDefault()
+      if(canvas!.hasPointerCapture(e.pointerId)) canvas!.releasePointerCapture(e.pointerId)
+      if(!isDrawing.current) return
       isDrawing.current = false
+      activePointerId.current = null
       if(currentRef.current.length > 0) {
         strokesRef.current = [...strokesRef.current, currentRef.current]
         currentRef.current = []
       }
     }
 
-    function onPointerCancel() {
-      isDrawing.current  = false
+    function onPointerCancel(e: PointerEvent) {
+      if(e.pointerId !== activePointerId.current) return
+      e.preventDefault()
+      isDrawing.current = false
+      activePointerId.current = null
+      // Save whatever was drawn rather than discarding — pointercancel can fire
+      // mid-stroke when Safari detects simultaneous palm touches.
+      if(currentRef.current.length >= 2) {
+        strokesRef.current = [...strokesRef.current, currentRef.current]
+      }
       currentRef.current = []
     }
 
@@ -311,10 +352,11 @@ export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function Cap
         drawSegment(canvas!, currentRef.current[currentRef.current.length - 2]!, pt)
     }
 
-    canvas.addEventListener('pointerdown',   onPointerDown)
-    canvas.addEventListener('pointermove',   onPointerMove)
-    canvas.addEventListener('pointerup',     onPointerUp)
-    canvas.addEventListener('pointercancel', onPointerCancel)
+    const opts = { passive: false }
+    canvas.addEventListener('pointerdown',   onPointerDown,   opts)
+    canvas.addEventListener('pointermove',   onPointerMove,   opts)
+    canvas.addEventListener('pointerup',     onPointerUp,     opts)
+    canvas.addEventListener('pointercancel', onPointerCancel, opts)
     return () => {
       canvas.removeEventListener('pointerdown',   onPointerDown)
       canvas.removeEventListener('pointermove',   onPointerMove)

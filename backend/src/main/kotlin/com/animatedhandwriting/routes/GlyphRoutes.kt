@@ -24,7 +24,7 @@ fun Route.glyphRoutes() {
          get {
             val id   = call.parameters["id"]?.toUuidOrNull()
                ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid id")
-            val char = call.parameters["char"]
+            val char = call.parameters["char"]?.decodeChar()
                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing char")
             val result = GlyphService.getGlyph(id, char)
                ?: return@get call.respond(HttpStatusCode.NotFound)
@@ -34,7 +34,7 @@ fun Route.glyphRoutes() {
          post("/captures") {
             val id   = call.parameters["id"]?.toUuidOrNull()
                ?: return@post call.respond(HttpStatusCode.BadRequest, "Invalid id")
-            val char = call.parameters["char"]
+            val char = call.parameters["char"]?.decodeChar()
                ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing char")
             val request = call.receive<CreateCaptureRequest>()
             val result = GlyphService.addCapture(id, char, request)
@@ -45,7 +45,7 @@ fun Route.glyphRoutes() {
          put("/default-capture") {
             val id      = call.parameters["id"]?.toUuidOrNull()
                ?: return@put call.respond(HttpStatusCode.BadRequest, "Invalid id")
-            val char    = call.parameters["char"]
+            val char    = call.parameters["char"]?.decodeChar()
                ?: return@put call.respond(HttpStatusCode.BadRequest, "Missing char")
             val request = call.receive<SetDefaultCaptureRequest>()
             val captureId = request.captureId.toUuidOrNull()
@@ -57,7 +57,7 @@ fun Route.glyphRoutes() {
          delete("/captures/{captureId}") {
             val id        = call.parameters["id"]?.toUuidOrNull()
                ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid id")
-            val char      = call.parameters["char"]
+            val char      = call.parameters["char"]?.decodeChar()
                ?: return@delete call.respond(HttpStatusCode.BadRequest, "Missing char")
             val captureId = call.parameters["captureId"]?.toUuidOrNull()
                ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid captureId")
@@ -69,3 +69,4 @@ fun Route.glyphRoutes() {
 }
 
 private fun String.toUuidOrNull(): UUID? = try { UUID.fromString(this) } catch(e: Exception) { null }
+private fun String.decodeChar(): String = java.net.URLDecoder.decode(this, "UTF-8")

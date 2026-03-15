@@ -1,4 +1,4 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -150,12 +150,16 @@ body {
 /* ── Canvas area ────────────────────────────────────────── */
 .canvas-wrapper {
   width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .capture-canvas {
   background: white;
   border-radius: 12px;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   cursor: crosshair;
   display: block;
 }
@@ -163,9 +167,8 @@ body {
 /* ── Action buttons ─────────────────────────────────────── */
 .action-bar {
   display: flex;
-  gap: 8px;
-  padding: 8px 0;
-  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  gap: 6px;
+  padding: 6px 0 4px;
   flex-shrink: 0;
 }
 
