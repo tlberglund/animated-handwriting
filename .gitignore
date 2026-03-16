@@ -3,5 +3,6 @@ capture-app/dist/
 backend/build/
 backend/bin/
 backend/.kotlin/
+node_modules/
 
 

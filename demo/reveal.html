@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Handwriting — Reveal.js Demo</title>
+
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+
+   <style>
+      /* Give canvases an explicit size — the plugin never sets CSS dimensions. */
+      canvas.hw {
+         display: block;
+         width: 700px;
+         height: 160px;
+      }
+
+      canvas.hw-sm {
+         display: block;
+         width: 420px;
+         height: 110px;
+      }
+
+      /* Center canvases in slides */
+      .reveal .slides section {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         justify-content: center;
+         gap: 24px;
+      }
+
+      .reveal .slides section h2 {
+         margin: 0;
+      }
+
+      .reveal .slides section p.note {
+         font-size: 0.55em;
+         color: #999;
+         margin: 0;
+      }
+   </style>
+</head>
+<body>
+<div class="reveal">
+   <div class="slides">
+
+      <!-- ── Slide 1: Title (no canvas) ───────────────────────────────── -->
+      <section>
+         <h1>Handwriting</h1>
+         <p>A Reveal.js animation plugin</p>
+         <p class="note">Use arrow keys to navigate</p>
+      </section>
+
+      <!-- ── Slide 2: Non-fragment — animates immediately on slide entry ─ -->
+      <section>
+         <h2>On slide entry</h2>
+         <canvas class="hw"
+                 data-handwriting="HELLO, WORLD"
+                 data-speed="4"
+                 data-cap-height="100"
+                 data-color="#ff0000"
+                 data-top-pad="0"
+                 style="width:700px;height:160px">
+         </canvas>
+         <p class="note">This canvas animates as soon as the slide appears.</p>
+      </section>
+
+      <!-- ── Slide 3: Vertical stack ──────────────────────────────────── -->
+      <section>
+         <section>
+            <h2>Vertical slides</h2>
+            <canvas class="hw"
+                    data-handwriting="slide down"
+                    style="width:600px;height:140px">
+            </canvas>
+            <p class="note">Press ↓ for the next vertical slide.</p>
+         </section>
+         <section>
+            <h2>Still vertical</h2>
+            <canvas class="hw"
+                    data-handwriting="keep going"
+                    style="width:600px;height:140px">
+            </canvas>
+            <p class="note">Each vertical slide animates on entry.</p>
+         </section>
+      </section>
+
+      <!-- ── Slide 4: Fragment canvas — animates on fragment reveal ────── -->
+      <section>
+         <h2>Fragment reveal</h2>
+         <p>Press Space to reveal the handwriting.</p>
+         <canvas class="hw fragment"
+                 data-handwriting="there it is"
+                 style="width:600px;height:140px">
+         </canvas>
+         <p class="note fragment">
+            Going back clears the canvas so it re-animates next time.
+         </p>
+      </section>
+
+      <!-- ── Slide 5: Per-canvas overrides ────────────────────────────── -->
+      <section>
+         <h2>Per-canvas overrides</h2>
+         <canvas class="hw-sm fragment"
+                 data-handwriting="fast"
+                 data-speed="3.5"
+                 data-cap-height="72"
+                 style="width:420px;height:110px">
+         </canvas>
+         <canvas class="hw-sm fragment"
+                 data-handwriting="slow"
+                 data-speed="0.6"
+                 data-cap-height="72"
+                 style="width:420px;height:110px">
+         </canvas>
+         <canvas class="hw-sm fragment"
+                 data-handwriting="colored"
+                 data-speed="1.5"
+                 data-cap-height="72"
+                 data-color="#b03030"
+                 style="width:420px;height:110px">
+         </canvas>
+         <p class="note">Each canvas uses data-speed, data-cap-height, and data-color independently.</p>
+      </section>
+
+   </div>
+</div>
+
+<!-- Plugin bundles HandwritingAnimator — no separate script tag needed.   -->
+<!-- Build first: cd reveal-plugin && npm run build                        -->
+<script src="dist/handwriting-reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+   Reveal.initialize({
+      hash: true,
+      plugins: [HandwritingReveal],
+      handwriting: {
+         // Replace with the path to your exported glyph set JSON.
+         // Export one from the capture app: select a set, then click Export.
+         glyphSet: './hand.json',
+         speed:     1.5,
+         capHeight: 100,
+         color:     '#1a1a1a',
+      },
+   });
+</script>
+</body>
+</html>

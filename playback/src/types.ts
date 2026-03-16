@@ -48,6 +48,8 @@ export interface WriteOptions {
    wordGap?: number;
    /** Cap-height in canvas CSS pixels. Default 80 */
    capHeight?: number;
+   /** Vertical offset in CSS pixels from the top of the canvas to the cap-height line. Default 12 */
+   topPad?: number;
 }
 
 // ── Internal sequencer types ──────────────────────────────────────────────────

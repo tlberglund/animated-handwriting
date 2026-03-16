@@ -7,6 +7,8 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
 
+private fun round4(v: Double): Double = Math.round(v * 10000) / 10000.0
+
 object ExportService {
 
    private val json = Json { ignoreUnknownKeys = true }
@@ -47,10 +49,10 @@ object ExportService {
             val normalizedStrokes = rawStrokes.map { stroke ->
                stroke.map { pt ->
                   ExportPoint(
-                     x = (pt.x - minX) * scale,
-                     y = (pt.y - meta.capHeightY) * scale,
+                     x = round4((pt.x - minX) * scale),
+                     y = round4((pt.y - meta.capHeightY) * scale),
                      t = pt.t,
-                     p = pt.p
+                     p = round4(pt.p)
                   )
                }
             }
@@ -66,7 +68,7 @@ object ExportService {
          if(exportCaptures.isNotEmpty()) {
             exportGlyphs[character] = ExportGlyph(
                character = character,
-               width     = glyphWidth,
+               width     = round4(glyphWidth),
                captures  = exportCaptures
             )
          }

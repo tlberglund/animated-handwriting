@@ -21,7 +21,9 @@
       "mcp__paper__create_artboard",
       "mcp__paper__write_html",
       "mcp__paper__get_screenshot",
-      "mcp__paper__finish_working_on_nodes"
+      "mcp__paper__finish_working_on_nodes",
+      "Bash(cd /Users/tlberglund/code/animated-handwriting/reveal-plugin && npm install 2>&1 | tail -5)",
+      "Bash(cd /Users/tlberglund/code/animated-handwriting/playback && npm install 2>&1 | tail -3 && npm run build 2>&1)"
     ]
   }
 }

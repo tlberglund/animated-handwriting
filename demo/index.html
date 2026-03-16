@@ -269,208 +269,18 @@
          <select id="set-select"><option value="">— load sets —</option></select>
          <button id="btn-load">Load</button>
       </div>
-      <div id="status">No glyph set loaded. Using built-in sample data.</div>
+      <div id="status">No glyph set loaded.</div>
    </div>
 
-   <!-- Inline script — no build step needed for demo -->
+   <!-- NOTE: playback/ must be built first: cd playback && npm run build -->
+   <script src="../playback/dist/handwriting-animator.js"></script>
    <script type="module">
-      // ── Inline playback engine (copy of compiled output) ─────────────────
-      // For dev convenience the demo can import the TS source via a bundler,
-      // or load the built JS from ../playback/dist/handwriting-animator.js.
-      // Here we inline a minimal self-contained version for zero-setup demo.
-
-      class HandwritingAnimator {
-         constructor(canvas, glyphSet) {
-            this.canvas   = canvas;
-            this.glyphSet = glyphSet;
-            this.lastUsed = new Map();
-            const ctx = canvas.getContext('2d');
-            if(!ctx) throw new Error('No 2d context');
-            this.ctx = ctx;
-         }
-
-         write(text, options = {}) {
-            const opts = {
-               speed:     options.speed     ?? 1.5,
-               color:     options.color     ?? '#1a1a1a',
-               minWidth:  options.minWidth  ?? 2,
-               maxWidth:  options.maxWidth  ?? 4,
-               scale:     options.scale     ?? 2,
-               letterGap: options.letterGap ?? 0.05,
-               wordGap:   options.wordGap   ?? 0.35,
-               capHeight: options.capHeight ?? 80,
-            };
-            this._prepareCanvas(opts);
-            const seq = this._buildSequence(text, opts);
-            if(seq.length === 0) return Promise.resolve();
-            return this._animate(seq, opts);
-         }
-
-         _prepareCanvas(opts) {
-            const cssW = this.canvas.clientWidth  || this.canvas.width;
-            const cssH = this.canvas.clientHeight || this.canvas.height;
-            this.canvas.width  = cssW * opts.scale;
-            this.canvas.height = cssH * opts.scale;
-            this.ctx.scale(opts.scale, opts.scale);
-            this.ctx.clearRect(0, 0, cssW, cssH);
-         }
-
-         _tokenize(text) {
-            const ligs = Object.keys(this.glyphSet.glyphs)
-               .filter(k => k.length > 1)
-               .sort((a, b) => b.length - a.length);
-            const tokens = [];
-            let i = 0;
-            while(i < text.length) {
-               if(text[i] === ' ') { tokens.push(' '); i++; continue; }
-               let matched = false;
-               for(const lig of ligs) {
-                  if(text.startsWith(lig, i)) { tokens.push(lig); i += lig.length; matched = true; break; }
-               }
-               if(!matched) { tokens.push(text[i]); i++; }
-            }
-            return tokens;
-         }
-
-         _pickCapture(character, captures) {
-            if(captures.length === 0) return null;
-            if(captures.length === 1) return captures[0];
-            const lastId     = this.lastUsed.get(character);
-            const candidates = lastId ? captures.filter(c => c.id !== lastId) : captures;
-            const pool       = candidates.length > 0 ? candidates : captures;
-            const chosen     = pool[Math.floor(Math.random() * pool.length)];
-            this.lastUsed.set(character, chosen.id);
-            return chosen;
-         }
-
-         _smooth(points) {
-            if(points.length < 3) return points;
-            return points.map((pt, i) => {
-               if(i === 0 || i === points.length - 1) return pt;
-               const prev = points[i - 1], next = points[i + 1];
-               return { x: (prev.x + pt.x*2 + next.x)/4, y: (prev.y + pt.y*2 + next.y)/4, t: pt.t, p: pt.p };
-            });
-         }
-
-         _buildSequence(text, opts) {
-            const tokens = this._tokenize(text);
-            const seq    = [];
-            let xOffset  = 0;
-            for(const token of tokens) {
-               if(token === ' ') { xOffset += opts.wordGap; continue; }
-               const glyph = this.glyphSet.glyphs[token];
-               if(!glyph) { console.warn(`[HandwritingAnimator] Missing glyph: "${token}"`); continue; }
-               const cap = this._pickCapture(token, glyph.captures);
-               if(!cap) continue;
-               seq.push({ character: token, capture: cap, xOffset });
-               xOffset += glyph.width + opts.letterGap;
-            }
-            return seq;
-         }
-
-         _animate(sequence, opts) {
-            return new Promise(resolve => {
-               const events = [];
-               let globalT  = 0;
-
-               for(const sg of sequence) {
-                  const xOrigin = sg.xOffset * opts.capHeight;
-                  let capStart  = null;
-                  for(const stroke of sg.capture.strokes) {
-                     const smoothed = this._smooth(stroke);
-                     for(let i = 1; i < smoothed.length; i++) {
-                        const prev = smoothed[i-1], curr = smoothed[i];
-                        if(capStart === null) capStart = prev.t;
-                        events.push({
-                           fx: xOrigin + prev.x * opts.capHeight,
-                           fy: prev.y  * opts.capHeight,
-                           tx: xOrigin + curr.x * opts.capHeight,
-                           ty: curr.y  * opts.capHeight,
-                           p:  curr.p,
-                           t:  globalT + (curr.t - capStart) / opts.speed,
-                        });
-                     }
-                  }
-                  const last = sg.capture.strokes.at(-1)?.at(-1);
-                  const first = sg.capture.strokes[0]?.[0];
-                  const dur = (first && last) ? (last.t - first.t) / opts.speed : 0;
-                  globalT += dur + 30 / opts.speed;
-               }
-
-               if(events.length === 0) { resolve(); return; }
-
-               const startTime = performance.now();
-               let idx = 0;
-
-               const frame = () => {
-                  const elapsed = performance.now() - startTime;
-                  while(idx < events.length && events[idx].t <= elapsed) {
-                     const ev = events[idx++];
-                     const lw = opts.minWidth + ev.p * (opts.maxWidth - opts.minWidth);
-                     this.ctx.lineCap = this.ctx.lineJoin = 'round';
-                     this.ctx.strokeStyle = opts.color;
-                     this.ctx.lineWidth   = lw;
-                     this.ctx.beginPath();
-                     this.ctx.moveTo(ev.fx, ev.fy);
-                     this.ctx.lineTo(ev.tx, ev.ty);
-                     this.ctx.stroke();
-                  }
-                  if(idx < events.length) requestAnimationFrame(frame);
-                  else resolve();
-               };
-               requestAnimationFrame(frame);
-            });
-         }
-      }
-
-      // ── Sample glyph set (minimal, for demo without a running backend) ────
-      // Each capture has a single stroke drawing the letter in normalized coords.
-      // Replace with a real export from the backend for actual use.
-      const SAMPLE_GLYPH_SET = buildSampleGlyphSet();
-
-      function buildSampleGlyphSet() {
-         // Synthetic glyph data: simple geometric representations
-         const makeCapture = (strokes) => ({ id: Math.random().toString(36).slice(2), strokes });
-         const pt = (x, y, t, p = 0.6) => ({ x, y, t, p });
-
-         const glyphs = {
-            'H': { character: 'H', width: 0.6, captures: [makeCapture([
-               [pt(0.05,0,0), pt(0.05,1,80)],
-               [pt(0.05,0.5,120), pt(0.55,0.5,180)],
-               [pt(0.55,0,220), pt(0.55,1,300)]
-            ])] },
-            'e': { character: 'e', width: 0.45, captures: [makeCapture([
-               [pt(0.05,0.6,0), pt(0.4,0.6,40), pt(0.4,0.35,80), pt(0.25,0.35,110), pt(0.05,0.55,150), pt(0.05,0.75,180), pt(0.25,1.0,220), pt(0.4,0.95,250)]
-            ])] },
-            'l': { character: 'l', width: 0.22, captures: [makeCapture([
-               [pt(0.1,0,0), pt(0.1,1,80)]
-            ])] },
-            'o': { character: 'o', width: 0.48, captures: [makeCapture([
-               [pt(0.24,0.35,0), pt(0.05,0.5,40), pt(0.05,0.75,80), pt(0.24,1.0,120),
-                pt(0.43,0.75,160), pt(0.43,0.5,200), pt(0.24,0.35,240)]
-            ])] },
-            ' ': { character: ' ', width: 0.3, captures: [] },
-            'w': { character: 'w', width: 0.6, captures: [makeCapture([
-               [pt(0.0,0.35,0),pt(0.1,1.0,50),pt(0.3,0.65,90),pt(0.5,1.0,130),pt(0.6,0.35,180)]
-            ])] },
-            'r': { character: 'r', width: 0.38, captures: [makeCapture([
-               [pt(0.05,0.35,0),pt(0.05,1.0,70)],
-               [pt(0.05,0.5,100),pt(0.2,0.35,140),pt(0.35,0.35,170)]
-            ])] },
-            'd': { character: 'd', width: 0.48, captures: [makeCapture([
-               [pt(0.4,0,0),pt(0.4,1.0,100)],
-               [pt(0.4,0.35,130),pt(0.25,0.35,160),pt(0.05,0.5,190),pt(0.05,0.75,220),
-                pt(0.25,1.0,250),pt(0.4,1.0,280)]
-            ])] },
-         };
-
-         return { version: 1, captureSetName: 'Sample', glyphs };
-      }
+      const { HandwritingAnimator } = HandwritingAnimatorLib;
 
       // ── State ─────────────────────────────────────────────────────────────
       const outputCanvas = document.getElementById('output-canvas');
-      let glyphSet       = SAMPLE_GLYPH_SET;
-      let animator       = new HandwritingAnimator(outputCanvas, glyphSet);
+      let glyphSet       = null;
+      let animator       = null;
       let renderScale    = 2;
       let isAnimating    = false;
 
@@ -501,7 +311,7 @@
       });
 
       btnAnimate.addEventListener('click', async () => {
-         if(isAnimating) return;
+         if(isAnimating || !glyphSet) return;
          const text = textInput.value.trim();
          if(!text) return;
          isAnimating = true;

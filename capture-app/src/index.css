@@ -59,6 +59,20 @@ body {
   cursor: pointer;
 }
 
+.btn-export {
+  background: #5a7a4a;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btn-export:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ── Progress bar ───────────────────────────────────────── */
 .progress-bar {
   padding: 8px 16px;

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 
@@ -9,6 +10,7 @@ interface Props {
 
 export default function TopBar({ captureSetId, onSetChange, onOpenGrid }: Props) {
   const queryClient = useQueryClient()
+  const [isExporting, setIsExporting] = useState(false)
 
   const { data: sets = [], isError } = useQuery({
     queryKey: ['captureSets'],
@@ -31,6 +33,25 @@ export default function TopBar({ captureSetId, onSetChange, onOpenGrid }: Props)
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onSetChange(e.target.value || null)
+  }
+
+  const handleExport = async () => {
+    if(!captureSetId || isExporting) return
+    setIsExporting(true)
+    try {
+      const data = await api.exportGlyphSet(captureSetId)
+      const setName = sets.find(s => s.id === captureSetId)?.name ?? captureSetId
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${setName}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+    finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -58,6 +79,13 @@ export default function TopBar({ captureSetId, onSetChange, onOpenGrid }: Props)
       </button>
       <button className="btn-open-grid" onClick={onOpenGrid}>
         Characters
+      </button>
+      <button
+        className="btn-export"
+        onClick={handleExport}
+        disabled={!captureSetId || isExporting}
+      >
+        {isExporting ? 'Exporting…' : 'Export'}
       </button>
     </div>
   )

@@ -1,0 +1,13 @@
+{
+  "name": "handwriting-reveal",
+  "version": "0.1.0",
+  "description": "Reveal.js plugin for handwriting animation",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --outfile=dist/handwriting-reveal.js --format=iife --global-name=HandwritingReveal",
+    "watch": "esbuild src/index.ts --bundle --outfile=dist/handwriting-reveal.js --format=iife --global-name=HandwritingReveal --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}

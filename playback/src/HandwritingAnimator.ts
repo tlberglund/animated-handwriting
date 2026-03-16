@@ -38,6 +38,7 @@ export class HandwritingAnimator {
          letterGap:  options.letterGap  ?? 0.05,
          wordGap:    options.wordGap    ?? 0.35,
          capHeight:  options.capHeight  ?? 80,
+         topPad:     options.topPad     ?? 12,
       };
    }
 
@@ -173,9 +174,9 @@ export class HandwritingAnimator {
 
                   events.push({
                      fromX:    xOrigin + prev.x * capHeight,
-                     fromY:    prev.y  * capHeight,
+                     fromY:    opts.topPad + prev.y * capHeight,
                      toX:      xOrigin + curr.x * capHeight,
-                     toY:      curr.y  * capHeight,
+                     toY:      opts.topPad + curr.y * capHeight,
                      pressure: curr.p,
                      t:        globalTOffset + relT / opts.speed,
                   });
