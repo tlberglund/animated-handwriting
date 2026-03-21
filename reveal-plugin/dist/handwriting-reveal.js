@@ -215,6 +215,32 @@ var HandwritingReveal = (() => {
   var require_src = __commonJS({
     "src/index.ts"(exports, module) {
       init_src();
+      function resolveDimension(value, slideSize) {
+        if (value.endsWith("%"))
+          return parseFloat(value) * slideSize / 100;
+        return parseFloat(value);
+      }
+      function applyPositionStyles(canvas, pluginConfig, deck) {
+        const { x, y, width, height } = canvas.dataset;
+        if (x === void 0 || y === void 0)
+          return;
+        const slideW = deck.getConfig().width ?? 960;
+        const slideH = deck.getConfig().height ?? 700;
+        const left = resolveDimension(x, slideW);
+        const top = resolveDimension(y, slideH);
+        const cssWidth = width !== void 0 ? resolveDimension(width, slideW) : void 0;
+        const cssHeight = height !== void 0 ? resolveDimension(height, slideH) : (() => {
+          const capHeight = parseFloat(canvas.dataset.capHeight ?? "") || (pluginConfig.capHeight ?? 80);
+          const topPad = parseFloat(canvas.dataset.topPad ?? "") || (pluginConfig.topPad ?? 12);
+          return topPad + capHeight * 1.5;
+        })();
+        canvas.style.position = "absolute";
+        canvas.style.left = `${left}px`;
+        canvas.style.top = `${top}px`;
+        if (cssWidth !== void 0)
+          canvas.style.width = `${cssWidth}px`;
+        canvas.style.height = `${cssHeight}px`;
+      }
       var cache = /* @__PURE__ */ new Map();
       function loadGlyphSet(url) {
         if (!cache.has(url)) {
@@ -288,6 +314,9 @@ var HandwritingReveal = (() => {
             console.error("[HandwritingReveal] handwriting.glyphSet is required but was not provided.");
             return;
           }
+          document.querySelectorAll("[data-handwriting]").forEach((canvas) => {
+            applyPositionStyles(canvas, config, deck);
+          });
           deck.on("slidechanged", (event) => {
             const currentSlide = event.currentSlide;
             prefetchSlide(currentSlide, config);

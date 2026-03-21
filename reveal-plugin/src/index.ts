@@ -6,6 +6,7 @@ interface PluginConfig {
   speed?: number;
   capHeight?: number;
   color?: string;
+  topPad?: number;
 }
 
 interface ResolvedOptions {
@@ -13,6 +14,48 @@ interface ResolvedOptions {
   speed: number;
   capHeight: number;
   color: string;
+}
+
+// ── Dimension resolution ─────────────────────────────────────────────────────
+// Accepts "30%" (resolved against slideSize) or "240" (raw pixels).
+
+function resolveDimension(value: string, slideSize: number): number {
+  if(value.endsWith('%')) return parseFloat(value) * slideSize / 100;
+  return parseFloat(value);
+}
+
+// ── Position style injection ──────────────────────────────────────────────────
+// Applied eagerly at init time for all canvases carrying data-x and data-y.
+
+function applyPositionStyles(canvas: HTMLCanvasElement, pluginConfig: PluginConfig, deck: any): void {
+  const { x, y, width, height } = canvas.dataset;
+
+  // Require both axes; a canvas with only one stays in normal flow.
+  if(x === undefined || y === undefined) return;
+
+  const slideW: number = deck.getConfig().width  ?? 960;
+  const slideH: number = deck.getConfig().height ?? 700;
+
+  const left = resolveDimension(x, slideW);
+  const top  = resolveDimension(y, slideH);
+
+  const cssWidth = width !== undefined
+    ? resolveDimension(width, slideW)
+    : undefined;
+
+  const cssHeight = height !== undefined
+    ? resolveDimension(height, slideH)
+    : (() => {
+        const capHeight = parseFloat(canvas.dataset.capHeight ?? '') || (pluginConfig.capHeight ?? 80);
+        const topPad    = parseFloat(canvas.dataset.topPad    ?? '') || (pluginConfig.topPad    ?? 12);
+        return topPad + capHeight * 1.5;
+      })();
+
+  canvas.style.position = 'absolute';
+  canvas.style.left     = `${left}px`;
+  canvas.style.top      = `${top}px`;
+  if(cssWidth  !== undefined) canvas.style.width  = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
 }
 
 // ── Glyph set cache ─────────────────────────────────────────────────────────
@@ -107,6 +150,11 @@ const HandwritingReveal = {
       console.error('[HandwritingReveal] handwriting.glyphSet is required but was not provided.');
       return;
     }
+
+    // ── Eager position injection ─────────────────────────────────────────────
+    document.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(canvas => {
+      applyPositionStyles(canvas, config, deck);
+    });
 
     // ── slidechanged ────────────────────────────────────────────────────────
     deck.on('slidechanged', (event: any) => {

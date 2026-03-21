@@ -100,7 +100,28 @@
          </p>
       </section>
 
-      <!-- ── Slide 5: Per-canvas overrides ────────────────────────────── -->
+      <!-- ── Slide 5: Absolute positioning ───────────────────────────── -->
+      <!-- data-x/y in pixels; data-width in pixels; height derived from capHeight -->
+      <!-- A flow h2 sits at the top via flex; canvases overlay via position:absolute -->
+      <section>
+         <h2>Absolute positioning</h2>
+         <canvas data-handwriting="top left"
+                 data-x="40" data-y="120"
+                 data-width="380"
+                 data-cap-height="60">
+         </canvas>
+         <canvas data-handwriting="bottom right"
+                 data-x="50%" data-y="65%"
+                 data-width="45%"
+                 data-cap-height="60">
+         </canvas>
+         <p class="note" style="position:absolute;bottom:24px;left:0;right:0;text-align:center">
+            Pixel coords (top-left canvas) and percentage coords (bottom-right canvas).
+            Height is derived from cap-height.
+         </p>
+      </section>
+
+      <!-- ── Slide 6: Per-canvas overrides (speed, color) ────────────── -->
       <section>
          <h2>Per-canvas overrides</h2>
          <canvas class="hw-sm fragment"
