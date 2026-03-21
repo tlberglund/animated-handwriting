@@ -1,5 +1,7 @@
 import { HandwritingAnimator } from '../../playback/src/index';
+import { DiagramAnimator } from '../../diagram-playback/src/index';
 import type { GlyphSet } from '../../playback/src/types';
+import type { DiagramExport } from '../../diagram-playback/src/types';
 
 interface PluginConfig {
   glyphSet?: string;
@@ -72,6 +74,20 @@ function loadGlyphSet(url: string): Promise<GlyphSet> {
   return cache.get(url)!;
 }
 
+// ── Diagram cache ────────────────────────────────────────────────────────────
+// Stores Promise<DiagramExport> so concurrent requests for the same URL coalesce.
+const diagramCache = new Map<string, Promise<DiagramExport>>();
+
+function loadDiagram(url: string): Promise<DiagramExport> {
+  if(!diagramCache.has(url)) {
+    diagramCache.set(url, fetch(url).then(r => {
+      if(!r.ok) throw new Error(`HTTP ${r.status} fetching diagram: ${url}`);
+      return r.json() as Promise<DiagramExport>;
+    }));
+  }
+  return diagramCache.get(url)!;
+}
+
 // ── Option resolution ────────────────────────────────────────────────────────
 
 function resolveOptions(canvas: HTMLCanvasElement, pluginConfig: PluginConfig): ResolvedOptions | null {
@@ -128,14 +144,47 @@ async function animateCanvas(canvas: HTMLCanvasElement, pluginConfig: PluginConf
   });
 }
 
+async function animateDiagramCanvas(canvas: HTMLCanvasElement, pluginConfig: PluginConfig): Promise<void> {
+  const url = canvas.dataset.diagram;
+  if(!url) return;
+
+  if(canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+    console.warn('[HandwritingReveal] Diagram canvas has zero size, skipping animation:', canvas);
+    return;
+  }
+
+  const speed = parseFloat(canvas.dataset.diagramSpeed ?? '') || (pluginConfig.speed ?? 1.5);
+  const color =            canvas.dataset.diagramColor ?? pluginConfig.color         ?? '#1a1a1a';
+
+  let diagram: DiagramExport;
+  try {
+    diagram = await loadDiagram(url);
+  }
+  catch(err) {
+    console.error('[HandwritingReveal] Failed to load diagram:', url, err);
+    return;
+  }
+
+  new DiagramAnimator(canvas, diagram).play({ speed, color });
+}
+
 // ── Prefetch ─────────────────────────────────────────────────────────────────
 
 function prefetchSlide(slide: Element, pluginConfig: PluginConfig): void {
-  const canvases = slide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]');
-  canvases.forEach(canvas => {
+  slide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(canvas => {
     const url = canvas.dataset.glyphSet ?? pluginConfig.glyphSet;
     if(url) loadGlyphSet(url);
   });
+  slide.querySelectorAll<HTMLCanvasElement>('[data-diagram]').forEach(canvas => {
+    const url = canvas.dataset.diagram;
+    if(url) loadDiagram(url);
+  });
+}
+
+// ── Canvas clearing ───────────────────────────────────────────────────────────
+
+function clearCanvas(canvas: HTMLCanvasElement): void {
+  canvas.width = canvas.width;  // reset bitmap — also cancels in-progress rAF draws
 }
 
 // ── Plugin object ─────────────────────────────────────────────────────────────
@@ -147,12 +196,11 @@ const HandwritingReveal = {
     const config: PluginConfig = deck.getConfig().handwriting ?? {};
 
     if(!config.glyphSet) {
-      console.error('[HandwritingReveal] handwriting.glyphSet is required but was not provided.');
-      return;
+      console.warn('[HandwritingReveal] handwriting.glyphSet is not set — handwriting canvases will not animate.');
     }
 
     // ── Eager position injection ─────────────────────────────────────────────
-    document.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(canvas => {
+    document.querySelectorAll<HTMLCanvasElement>('[data-handwriting], [data-diagram]').forEach(canvas => {
       applyPositionStyles(canvas, config, deck);
     });
 
@@ -160,54 +208,73 @@ const HandwritingReveal = {
     deck.on('slidechanged', (event: any) => {
       const currentSlide: Element = event.currentSlide;
 
-      // Prefetch all glyph sets referenced on this slide (including fragments)
+      // Prefetch all glyph sets / diagrams referenced on this slide
       prefetchSlide(currentSlide, config);
 
-      // Animate non-fragment canvases immediately
-      const canvases = currentSlide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]');
-      canvases.forEach(canvas => {
+      // Animate non-fragment handwriting canvases
+      currentSlide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(canvas => {
         if(!isFragment(canvas, currentSlide)) {
           animateCanvas(canvas, config);
         }
       });
 
-      // Cancel in-progress animations on the previous slide by resetting contexts
+      // Animate non-fragment diagram canvases
+      currentSlide.querySelectorAll<HTMLCanvasElement>('[data-diagram]').forEach(canvas => {
+        if(!isFragment(canvas, currentSlide)) {
+          animateDiagramCanvas(canvas, config);
+        }
+      });
+
+      // Clear canvases on the previous slide
       const previousSlide: Element | undefined = event.previousSlide;
       if(previousSlide) {
-        const prev = previousSlide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]');
-        prev.forEach(canvas => { canvas.width = canvas.width; });
+        previousSlide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(clearCanvas);
+        previousSlide.querySelectorAll<HTMLCanvasElement>('[data-diagram]').forEach(clearCanvas);
       }
     });
 
     // ── fragmentshown ────────────────────────────────────────────────────────
     deck.on('fragmentshown', (event: any) => {
       const fragment: Element = event.fragment;
-      if(fragment instanceof HTMLCanvasElement && fragment.dataset.handwriting !== undefined) {
-        animateCanvas(fragment, config);
+
+      if(fragment instanceof HTMLCanvasElement) {
+        if(fragment.dataset.handwriting !== undefined) animateCanvas(fragment, config);
+        if(fragment.dataset.diagram     !== undefined) animateDiagramCanvas(fragment, config);
       }
       else {
-        const canvases = fragment.querySelectorAll<HTMLCanvasElement>('[data-handwriting]');
-        canvases.forEach(canvas => animateCanvas(canvas, config));
+        fragment.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(canvas => animateCanvas(canvas, config));
+        fragment.querySelectorAll<HTMLCanvasElement>('[data-diagram]').forEach(canvas => animateDiagramCanvas(canvas, config));
       }
     });
 
     // ── fragmenthidden ───────────────────────────────────────────────────────
     deck.on('fragmenthidden', (event: any) => {
       const fragment: Element = event.fragment;
-      const canvases = fragment instanceof HTMLCanvasElement && fragment.dataset.handwriting !== undefined
-        ? [fragment as HTMLCanvasElement]
-        : Array.from(fragment.querySelectorAll<HTMLCanvasElement>('[data-handwriting]'));
-      canvases.forEach(canvas => { canvas.width = canvas.width; });
+
+      if(fragment instanceof HTMLCanvasElement) {
+        if(fragment.dataset.handwriting !== undefined) clearCanvas(fragment);
+        if(fragment.dataset.diagram     !== undefined) clearCanvas(fragment);
+      }
+      else {
+        fragment.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(clearCanvas);
+        fragment.querySelectorAll<HTMLCanvasElement>('[data-diagram]').forEach(clearCanvas);
+      }
     });
 
     // ── Initial slide ────────────────────────────────────────────────────────
     const initialSlide = deck.getCurrentSlide();
     if(initialSlide) {
       prefetchSlide(initialSlide, config);
-      const canvases = initialSlide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]');
-      canvases.forEach(canvas => {
+
+      initialSlide.querySelectorAll<HTMLCanvasElement>('[data-handwriting]').forEach(canvas => {
         if(!isFragment(canvas, initialSlide)) {
           animateCanvas(canvas, config);
+        }
+      });
+
+      initialSlide.querySelectorAll<HTMLCanvasElement>('[data-diagram]').forEach(canvas => {
+        if(!isFragment(canvas, initialSlide)) {
+          animateDiagramCanvas(canvas, config);
         }
       });
     }

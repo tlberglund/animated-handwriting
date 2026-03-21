@@ -18,6 +18,32 @@ body {
   overflow: hidden;
 }
 
+/* ── Tab bar ────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  background: #222;
+  border-bottom: 1px solid #3a3a3a;
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #888;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn--active {
+  color: #f0f0f0;
+  border-bottom-color: #4a90d9;
+}
+
 /* ── Top bar ────────────────────────────────────────────── */
 .top-bar {
   display: flex;
@@ -498,4 +524,280 @@ body {
 .roster-empty-dash {
   color: #2c2c2c;
   font-size: 12px;
+}
+
+/* ── Diagram area ───────────────────────────────────────── */
+.diagram-area {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.diagram-roster {
+  width: 220px;
+  flex-shrink: 0;
+  background: #222;
+  border-right: 1px solid #3a3a3a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.btn-new-diagram {
+  margin: 10px;
+  padding: 9px 12px;
+  background: #4a90d9;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.diagram-roster-empty {
+  padding: 16px;
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+}
+
+.diagram-list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.diagram-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 2px 6px;
+  transition: background 0.12s;
+}
+
+.diagram-list-item:hover {
+  background: #2a2a2a;
+}
+
+.diagram-list-item--selected {
+  background: #253040;
+}
+
+.diagram-list-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.diagram-list-name {
+  font-size: 14px;
+}
+
+.diagram-list-date {
+  font-size: 11px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.btn-delete-diagram {
+  background: none;
+  border: none;
+  color: #ff3b30;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.btn-delete-diagram:hover {
+  opacity: 1;
+}
+
+.diagram-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.diagram-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #3a3a3a;
+  flex-shrink: 0;
+}
+
+.diagram-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-btn {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 7px;
+  background: #3a3a3a;
+  color: #e0e0e0;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tool-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tool-btn--save {
+  background: #34c759;
+  color: #fff;
+}
+
+.tool-btn--export {
+  background: #5a7a4a;
+  color: #fff;
+}
+
+.tool-btn--cancel {
+  background: #555;
+  color: #ccc;
+}
+
+.diagram-canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #181818;
+  padding: 16px;
+}
+
+.diagram-canvas-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.diagram-canvas {
+  background: white;
+  border-radius: 8px;
+  touch-action: none;
+  cursor: crosshair;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* ── Dialogs ─────────────────────────────────────────────── */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: #2a2a2a;
+  border-radius: 14px;
+  padding: 24px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dialog-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.dialog-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.dialog-input {
+  background: #3a3a3a;
+  border: none;
+  border-radius: 8px;
+  color: #f0f0f0;
+  padding: 9px 12px;
+  font-size: 15px;
+}
+
+.aspect-ratio-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aspect-btn {
+  padding: 7px 14px;
+  border: 1px solid #4a4a4a;
+  border-radius: 7px;
+  background: #333;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.aspect-btn--active {
+  background: #4a90d9;
+  border-color: #4a90d9;
+  color: white;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.btn-dialog-cancel {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #444;
+  color: #ccc;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btn-dialog-confirm {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #4a90d9;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
 }

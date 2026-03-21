@@ -78,3 +78,27 @@ export interface Progress {
   nextUncaptured: string | null
   byType: Record<string, ProgressByType>
 }
+
+export interface NormalizedStroke {
+  x: number
+  y: number
+  t: number
+  p: number
+}
+
+export interface DiagramSummary {
+  id: string
+  name: string
+  aspectRatio: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DiagramDetail {
+  id: string
+  name: string
+  aspectRatio: number
+  strokes: NormalizedStroke[][]
+  createdAt: string
+  updatedAt: string
+}

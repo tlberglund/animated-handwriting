@@ -2,6 +2,7 @@ package com.animatedhandwriting
 
 import com.animatedhandwriting.db.DatabaseFactory
 import com.animatedhandwriting.routes.captureSetRoutes
+import com.animatedhandwriting.routes.diagramRoutes
 import com.animatedhandwriting.routes.glyphRoutes
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -54,6 +55,7 @@ fun Application.module() {
       route("/api") {
          captureSetRoutes()
          glyphRoutes()
+         diagramRoutes()
       }
    }
 }

@@ -120,6 +120,55 @@ data class ExportResponse(
    val glyphs: Map<String, ExportGlyph>
 )
 
+// ── Diagram ───────────────────────────────────────────────────────────────────
+
+@Serializable
+data class DiagramSummary(
+   val id: String,
+   val name: String,
+   val aspectRatio: Double,
+   val createdAt: String,
+   val updatedAt: String
+)
+
+@Serializable
+data class DiagramDetail(
+   val id: String,
+   val name: String,
+   val aspectRatio: Double,
+   val strokes: JsonElement,
+   val createdAt: String,
+   val updatedAt: String
+)
+
+@Serializable
+data class CreateDiagramRequest(
+   val name: String,
+   val aspectRatio: Double
+)
+
+@Serializable
+data class UpdateDiagramRequest(
+   val name: String? = null,
+   val strokes: JsonElement? = null
+)
+
+@Serializable
+data class DiagramExportPoint(
+   val x: Double,
+   val y: Double,
+   val t: Long,
+   val p: Double
+)
+
+@Serializable
+data class DiagramExport(
+   val version: Int = 1,
+   val name: String,
+   val aspectRatio: Double,
+   val strokes: List<List<DiagramExportPoint>>
+)
+
 // ── Internal normalization types ─────────────────────────────────────────────
 
 @Serializable

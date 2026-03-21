@@ -50,3 +50,14 @@ object GlyphCaptures : Table("glyph_capture") {
 
    override val primaryKey = PrimaryKey(id)
 }
+
+object Diagrams : Table("diagram") {
+   val id          = uuid("id").autoGenerate()
+   val name        = varchar("name", 200)
+   val aspectRatio = double("aspect_ratio")
+   val strokes     = text("strokes").default("[]")
+   val createdAt   = timestamp("created_at")
+   val updatedAt   = timestamp("updated_at")
+
+   override val primaryKey = PrimaryKey(id)
+}
