@@ -103,7 +103,7 @@ export class HandwritingAnimator {
          if(!capture) continue;
 
          sequence.push({ character: token, capture, xOffset });
-         xOffset += glyph.width + opts.letterGap;
+         xOffset += capture.width + opts.letterGap;
       }
 
       return sequence;

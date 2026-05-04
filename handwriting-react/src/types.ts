@@ -1,4 +1,4 @@
-import type { GlyphSet } from 'handwriting-playback';
+import type { GlyphSet } from '@tlberglund/handwriting-playback';
 import type { CSSProperties } from 'react';
 
 export interface HandwritingProps {

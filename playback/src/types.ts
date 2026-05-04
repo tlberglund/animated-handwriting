@@ -13,13 +13,13 @@ export interface ExportPoint {
 
 export interface ExportCapture {
    id: string;
+   /** Width in cap-height units (includes any scale adjustment baked in at export) */
+   width: number;
    strokes: ExportPoint[][];
 }
 
 export interface ExportGlyph {
    character: string;
-   /** Width in cap-height units */
-   width: number;
    captures: ExportCapture[];
 }
 

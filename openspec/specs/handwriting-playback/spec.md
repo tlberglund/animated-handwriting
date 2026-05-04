@@ -63,7 +63,7 @@ The playback engine SHALL normalize raw captured pixel coordinates using the can
 ---
 
 ### Requirement: Glyph layout and spacing
-The playback engine SHALL lay out glyphs sequentially left-to-right, accumulating x-offsets based on each glyph's normalized width. It SHALL apply configurable inter-letter and inter-word gaps (as fractions of cap-height). The effective width of each glyph SHALL be derived from its bounding box in normalized coordinates.
+The playback engine SHALL lay out glyphs sequentially left-to-right, accumulating x-offsets based on each **capture's** normalized width. It SHALL apply configurable inter-letter and inter-word gaps (as fractions of cap-height). The effective width used for advance SHALL be read from the selected capture, not from a glyph-level field.
 
 #### Scenario: Letter spacing accumulates correctly
 - **WHEN** rendering "ab"
@@ -72,6 +72,10 @@ The playback engine SHALL lay out glyphs sequentially left-to-right, accumulatin
 #### Scenario: Word gap applied at spaces
 - **WHEN** the input contains a space character
 - **THEN** a gap larger than the inter-letter gap is inserted between the preceding and following glyphs
+
+#### Scenario: Advance width read from capture
+- **WHEN** two captures of 'b' have widths 0.48 and 0.41 (due to differing adjustments)
+- **THEN** the advance spacing after 'b' matches the width of whichever capture was selected, not a shared glyph-level value
 
 ---
 

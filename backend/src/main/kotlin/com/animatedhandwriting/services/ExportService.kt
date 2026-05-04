@@ -24,33 +24,43 @@ object ExportService {
          .selectAll().where { GlyphCaptures.glyphId inList glyphIds }
          .groupBy { it[GlyphCaptures.glyphId] }
 
+      // Batch-fetch all adjustments for this capture set (avoid N+1)
+      val allCaptureIds = capturesByGlyphId.values.flatten().map { it[GlyphCaptures.id] }
+      val adjustments   = CaptureAdjustmentService.getAll(allCaptureIds)
+
       val exportGlyphs = mutableMapOf<String, ExportGlyph>()
 
       for(glyphRow in glyphs) {
-         val glyphId    = glyphRow[Glyphs.id]
-         val character  = glyphRow[Glyphs.character]
-         val captures   = capturesByGlyphId[glyphId] ?: continue
+         val glyphId   = glyphRow[Glyphs.id]
+         val character = glyphRow[Glyphs.character]
+         val captures  = capturesByGlyphId[glyphId] ?: continue
          if(captures.isEmpty()) continue
 
          val exportCaptures = mutableListOf<ExportCapture>()
-         var glyphWidth = 0.0
 
          for(captureRow in captures) {
+            val captureId    = captureRow[GlyphCaptures.id]
             val meta         = json.decodeFromString<CanvasMeta>(captureRow[GlyphCaptures.canvasMeta])
             val rawStrokes   = json.decodeFromString<List<List<RawPoint>>>(captureRow[GlyphCaptures.strokes])
             val allPoints    = rawStrokes.flatten()
             if(allPoints.isEmpty()) continue
 
-            val scale   = 1.0 / (meta.baselineY - meta.capHeightY)
-            val minX    = allPoints.minOf { it.x }
-            val maxX    = allPoints.maxOf { it.x }
-            glyphWidth  = maxOf(glyphWidth, (maxX - minX) * scale)
+            val vertScale = 1.0 / (meta.baselineY - meta.capHeightY)
+            val minX      = allPoints.minOf { it.x }
+            val maxX      = allPoints.maxOf { it.x }
+            val rawWidth  = (maxX - minX) * vertScale
+
+            val adj = adjustments[captureId] ?: CaptureAdjustment()
+            val s   = adj.scale
+            val yo  = adj.yOffset
 
             val normalizedStrokes = rawStrokes.map { stroke ->
                stroke.map { pt ->
+                  val nx = (pt.x - minX) * vertScale
+                  val ny = (pt.y - meta.capHeightY) * vertScale
                   ExportPoint(
-                     x = round4((pt.x - minX) * scale),
-                     y = round4((pt.y - meta.capHeightY) * scale),
+                     x = round4(nx * s),
+                     y = round4(1.0 - (1.0 - ny) * s + yo),
                      t = pt.t,
                      p = round4(pt.p)
                   )
@@ -59,7 +69,8 @@ object ExportService {
 
             exportCaptures.add(
                ExportCapture(
-                  id      = captureRow[GlyphCaptures.id].toString(),
+                  id      = captureId.toString(),
+                  width   = round4(rawWidth * s),
                   strokes = normalizedStrokes
                )
             )
@@ -68,16 +79,15 @@ object ExportService {
          if(exportCaptures.isNotEmpty()) {
             exportGlyphs[character] = ExportGlyph(
                character = character,
-               width     = round4(glyphWidth),
                captures  = exportCaptures
             )
          }
       }
 
       ExportResponse(
-         version         = 1,
-         captureSetName  = setRow[CaptureSets.name],
-         glyphs          = exportGlyphs
+         version        = 2,
+         captureSetName = setRow[CaptureSets.name],
+         glyphs         = exportGlyphs
       )
    }
 }

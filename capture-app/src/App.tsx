@@ -8,6 +8,7 @@ import CaptureArea from './components/CaptureArea'
 import GlyphRoster from './components/GlyphRoster'
 import TabBar, { Tab } from './components/TabBar'
 import DiagramArea from './components/DiagramArea'
+import AdjustTab from './components/AdjustTab'
 
 export default function App() {
   const [captureSetId, setCaptureSetId] = useState<string | null>(null)
@@ -87,6 +88,9 @@ export default function App() {
       )}
       {activeTab === 'diagrams' && (
         <DiagramArea />
+      )}
+      {activeTab === 'adjust' && (
+        <AdjustTab captureSetId={captureSetId} />
       )}
     </>
   )

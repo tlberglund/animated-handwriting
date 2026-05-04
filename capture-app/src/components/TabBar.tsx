@@ -1,4 +1,4 @@
-export type Tab = 'handwriting' | 'diagrams'
+export type Tab = 'handwriting' | 'diagrams' | 'adjust'
 
 interface TabBarProps {
   activeTab: Tab
@@ -19,6 +19,12 @@ export default function TabBar({ activeTab, onTabChange }: TabBarProps) {
         onClick={() => onTabChange('diagrams')}
       >
         Diagrams
+      </button>
+      <button
+        className={`tab-btn${activeTab === 'adjust' ? ' tab-btn--active' : ''}`}
+        onClick={() => onTabChange('adjust')}
+      >
+        Adjust
       </button>
     </div>
   )

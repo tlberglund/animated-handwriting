@@ -1,12 +1,35 @@
 {
-  "name": "handwriting-reveal",
+  "name": "@tlberglund/handwriting-reveal",
   "version": "0.1.0",
-  "description": "Reveal.js plugin for handwriting animation",
+  "description": "Reveal.js plugin for handwriting and diagram animation",
+  "main": "dist/handwriting-reveal.js",
+  "module": "dist/handwriting-reveal.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/handwriting-reveal.esm.js",
+      "require": "./dist/handwriting-reveal.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "author": "Tim Berglund <tlberglund@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tlberglund/animated-handwriting"
+  },
+  "keywords": ["reveal.js", "presentation", "handwriting", "animation", "canvas"],
+  "publishConfig": { "access": "public" },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --outfile=dist/handwriting-reveal.js --format=iife --global-name=HandwritingReveal",
+    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/handwriting-reveal.esm.js --format=esm",
+    "build:types": "tsc --emitDeclarationOnly",
     "watch": "esbuild src/index.ts --bundle --outfile=dist/handwriting-reveal.js --format=iife --global-name=HandwritingReveal --watch"
   },
   "devDependencies": {
+    "@tlberglund/handwriting-playback": "file:../playback",
+    "@tlberglund/diagram-playback": "file:../diagram-playback",
     "esbuild": "^0.20.0",
     "typescript": "^5.3.0"
   }

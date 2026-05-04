@@ -1,23 +1,39 @@
 {
-  "name": "diagram-react",
+  "name": "@tlberglund/diagram-react",
   "version": "0.1.0",
   "description": "React component for diagram animation",
   "main": "dist/diagram-react.esm.js",
   "module": "dist/diagram-react.esm.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/diagram-react.esm.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "author": "Tim Berglund <tlberglund@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tlberglund/animated-handwriting"
+  },
+  "keywords": ["diagram", "animation", "react", "canvas", "typescript"],
+  "publishConfig": { "access": "public" },
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --outfile=dist/diagram-react.esm.js --format=esm --external:react --external:react-dom",
+    "build": "esbuild src/index.ts --bundle --outfile=dist/diagram-react.esm.js --format=esm --external:react --external:react-dom --external:@tlberglund/diagram-playback",
     "build:types": "tsc --emitDeclarationOnly",
-    "watch": "esbuild src/index.ts --bundle --outfile=dist/diagram-react.esm.js --format=esm --external:react --external:react-dom --watch"
+    "watch": "esbuild src/index.ts --bundle --outfile=dist/diagram-react.esm.js --format=esm --external:react --external:react-dom --external:@tlberglund/diagram-playback --watch"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "react-dom": ">=18.0.0",
+    "@tlberglund/diagram-playback": "^0.1.0"
   },
   "devDependencies": {
+    "@tlberglund/diagram-playback": "file:../diagram-playback",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "diagram-playback": "file:../diagram-playback",
     "esbuild": "^0.20.0",
     "typescript": "^5.3.0"
   }

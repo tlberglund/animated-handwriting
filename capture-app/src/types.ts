@@ -51,13 +51,18 @@ export interface ExportPoint {
 
 export interface ExportCapture {
   id: string
+  width: number
   strokes: ExportPoint[][]
 }
 
 export interface ExportGlyph {
   character: string
-  width: number
   captures: ExportCapture[]
+}
+
+export interface CaptureAdjustment {
+  scale: number
+  yOffset: number
 }
 
 export interface GlyphSet {

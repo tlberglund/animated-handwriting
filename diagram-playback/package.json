@@ -1,11 +1,30 @@
 {
-  "name": "diagram-playback",
+  "name": "@tlberglund/diagram-playback",
   "version": "0.1.0",
   "description": "Diagram animation playback engine",
-  "main": "src/index.ts",
+  "main": "dist/diagram-animator.js",
+  "module": "dist/diagram-animator.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/diagram-animator.esm.js",
+      "require": "./dist/diagram-animator.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "author": "Tim Berglund <tlberglund@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tlberglund/animated-handwriting"
+  },
+  "keywords": ["diagram", "animation", "canvas", "typescript"],
+  "publishConfig": { "access": "public" },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --outfile=dist/diagram-animator.js --format=iife --global-name=DiagramPlaybackLib",
     "build:esm": "esbuild src/index.ts --bundle --outfile=dist/diagram-animator.esm.js --format=esm",
+    "build:types": "tsc --emitDeclarationOnly",
     "watch": "esbuild src/index.ts --bundle --outfile=dist/diagram-animator.js --format=iife --global-name=DiagramPlaybackLib --watch"
   },
   "devDependencies": {

@@ -90,6 +90,14 @@ data class ProgressResponse(
    val byType: Map<String, ProgressByType>
 )
 
+// ── Capture Adjustment ────────────────────────────────────────────────────────
+
+@Serializable
+data class CaptureAdjustment(
+   val scale:   Double = 1.0,
+   val yOffset: Double = 0.0
+)
+
 // ── Export ───────────────────────────────────────────────────────────────────
 
 @Serializable
@@ -103,19 +111,19 @@ data class ExportPoint(
 @Serializable
 data class ExportCapture(
    val id: String,
+   val width: Double,
    val strokes: List<List<ExportPoint>>
 )
 
 @Serializable
 data class ExportGlyph(
    val character: String,
-   val width: Double,
    val captures: List<ExportCapture>
 )
 
 @Serializable
 data class ExportResponse(
-   val version: Int = 1,
+   val version: Int = 2,
    val captureSetName: String,
    val glyphs: Map<String, ExportGlyph>
 )

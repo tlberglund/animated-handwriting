@@ -26,7 +26,7 @@ interface Props {
 }
 
 export const CaptureCanvas = forwardRef<CaptureCanvasHandle, Props>(function CaptureCanvas(
-  { onCapture, onModeChange, disabled = false, referenceStrokes, referenceMeta },
+  { onCapture, onModeChange, disabled: _disabled = false, referenceStrokes, referenceMeta },
   ref,
 ) {
   const canvasEl    = useRef<HTMLCanvasElement>(null)

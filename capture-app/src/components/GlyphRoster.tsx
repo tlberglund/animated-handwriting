@@ -17,7 +17,8 @@ const GROUPS = [
 ]
 
 function CaptureThumbnails({ glyph }: { glyph: ExportGlyph }) {
-  const viewW = Math.max(glyph.width, 0.5) + 0.15
+  const maxWidth = glyph.captures.reduce((m, c) => Math.max(m, c.width), 0.5)
+  const viewW = maxWidth + 0.15
   return (
     <>
       {glyph.captures.map(cap => (
@@ -70,7 +71,6 @@ export default function GlyphRoster({ captureSetId, currentChar, onNavigate }: P
               {chars.map(glyph => {
                 const exportGlyph = glyphSet?.glyphs[glyph.character]
                 const isActive = glyph.character === currentChar
-                const hasCaps = glyph.captureCount > 0
                 return (
                   <div
                     key={glyph.id}

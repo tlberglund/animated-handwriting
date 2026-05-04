@@ -5,8 +5,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { DiagramAnimator } from 'diagram-playback';
-import type { DiagramExport } from 'diagram-playback';
+import { DiagramAnimator } from '@tlberglund/diagram-playback';
+import type { DiagramExport } from '@tlberglund/diagram-playback';
 import type { DiagramHandle, DiagramProps } from './types';
 
 export const Diagram = forwardRef<DiagramHandle, DiagramProps>(

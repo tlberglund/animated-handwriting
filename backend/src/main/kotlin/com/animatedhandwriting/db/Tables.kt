@@ -51,6 +51,14 @@ object GlyphCaptures : Table("glyph_capture") {
    override val primaryKey = PrimaryKey(id)
 }
 
+object CaptureAdjustments : Table("capture_adjustment") {
+   val glyphCaptureId  = uuid("glyph_capture_id") references GlyphCaptures.id
+   val scale           = double("scale").default(1.0)
+   val yOffset         = double("y_offset").default(0.0)
+
+   override val primaryKey = PrimaryKey(glyphCaptureId)
+}
+
 object Diagrams : Table("diagram") {
    val id          = uuid("id").autoGenerate()
    val name        = varchar("name", 200)

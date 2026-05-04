@@ -1,4 +1,4 @@
-import type { DiagramExport } from 'diagram-playback';
+import type { DiagramExport } from '@tlberglund/diagram-playback';
 import type { CSSProperties } from 'react';
 
 export interface DiagramProps {

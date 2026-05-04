@@ -5,8 +5,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { HandwritingAnimator } from 'handwriting-playback';
-import type { GlyphSet } from 'handwriting-playback';
+import { HandwritingAnimator } from '@tlberglund/handwriting-playback';
+import type { GlyphSet } from '@tlberglund/handwriting-playback';
 import type { HandwritingHandle, HandwritingProps } from './types';
 
 export const Handwriting = forwardRef<HandwritingHandle, HandwritingProps>(

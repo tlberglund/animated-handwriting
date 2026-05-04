@@ -1,7 +1,9 @@
 package com.animatedhandwriting.routes
 
+import com.animatedhandwriting.models.CaptureAdjustment
 import com.animatedhandwriting.models.CreateCaptureRequest
 import com.animatedhandwriting.models.SetDefaultCaptureRequest
+import com.animatedhandwriting.services.CaptureAdjustmentService
 import com.animatedhandwriting.services.GlyphService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -63,6 +65,20 @@ fun Route.glyphRoutes() {
                ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid captureId")
             if(GlyphService.deleteCapture(id, char, captureId)) call.respond(HttpStatusCode.NoContent)
             else call.respond(HttpStatusCode.NotFound)
+         }
+
+         get("/captures/{captureId}/adjustment") {
+            val captureId = call.parameters["captureId"]?.toUuidOrNull()
+               ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid captureId")
+            call.respond(CaptureAdjustmentService.get(captureId))
+         }
+
+         put("/captures/{captureId}/adjustment") {
+            val captureId = call.parameters["captureId"]?.toUuidOrNull()
+               ?: return@put call.respond(HttpStatusCode.BadRequest, "Invalid captureId")
+            val body = call.receive<CaptureAdjustment>()
+            val result = CaptureAdjustmentService.upsert(captureId, body.scale, body.yOffset)
+            call.respond(result)
          }
       }
    }

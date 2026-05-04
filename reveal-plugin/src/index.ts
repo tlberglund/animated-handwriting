@@ -1,7 +1,7 @@
-import { HandwritingAnimator } from '../../playback/src/index';
-import { DiagramAnimator } from '../../diagram-playback/src/index';
-import type { GlyphSet } from '../../playback/src/types';
-import type { DiagramExport } from '../../diagram-playback/src/types';
+import { HandwritingAnimator } from '@tlberglund/handwriting-playback';
+import { DiagramAnimator } from '@tlberglund/diagram-playback';
+import type { GlyphSet } from '@tlberglund/handwriting-playback';
+import type { DiagramExport } from '@tlberglund/diagram-playback';
 
 interface PluginConfig {
   glyphSet?: string;
@@ -262,7 +262,7 @@ const HandwritingReveal = {
     });
 
     // ── Initial slide ────────────────────────────────────────────────────────
-    const initialSlide = deck.getCurrentSlide();
+    const initialSlide: Element | undefined = deck.getCurrentSlide();
     if(initialSlide) {
       prefetchSlide(initialSlide, config);
 
@@ -281,4 +281,4 @@ const HandwritingReveal = {
   },
 };
 
-export = HandwritingReveal;
+export default HandwritingReveal;

@@ -1,4 +1,4 @@
-import type { CaptureSet, GlyphSummary, GlyphDetail, GlyphCapture, GlyphSet, Progress, Stroke, CanvasMeta, DiagramSummary, DiagramDetail, NormalizedStroke } from './types'
+import type { CaptureSet, GlyphSummary, GlyphDetail, GlyphCapture, GlyphSet, Progress, Stroke, CanvasMeta, CaptureAdjustment, DiagramSummary, DiagramDetail, NormalizedStroke } from './types'
 
 const BASE = (import.meta.env.VITE_API_BASE_URL ?? '') + '/api'
 
@@ -61,6 +61,12 @@ export const api = {
 
   exportGlyphSet: (setId: string) =>
     req<GlyphSet>('GET', `/capture-sets/${setId}/export`),
+
+  getAdjustment: (setId: string, char: string, captureId: string) =>
+    req<CaptureAdjustment>('GET', `/capture-sets/${setId}/glyphs/${encodeChar(char)}/captures/${captureId}/adjustment`),
+
+  putAdjustment: (setId: string, char: string, captureId: string, scale: number, yOffset: number) =>
+    req<CaptureAdjustment>('PUT', `/capture-sets/${setId}/glyphs/${encodeChar(char)}/captures/${captureId}/adjustment`, { scale, yOffset }),
 
   listDiagrams: () =>
     req<DiagramSummary[]>('GET', '/diagrams'),
