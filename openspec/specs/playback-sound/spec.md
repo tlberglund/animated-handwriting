@@ -63,20 +63,20 @@ When a stroke begins rendering, the `SoundEngine` SHALL select and play one clip
 
 ---
 
-### Requirement: Speed-fallback shuffle mode
-The `SoundEngine` SHALL track the mean stroke duration (in milliseconds) for each glyph being rendered. When the mean stroke duration falls below half the duration of the shortest available clip, the engine SHALL activate **shuffle mode**: it maintains a randomized queue across all available clips regardless of stroke type, advances one clip per stroke, and re-randomizes the queue when exhausted. Shuffle mode SHALL deactivate when mean stroke duration rises above the threshold again.
+### Requirement: Speed-fallback scribble mode
+The `SoundEngine` SHALL expose an `isScribbleMode(meanStrokeDurationMs)` method. When the mean stroke duration falls below half the duration of the shortest stroke-type clip (straight/curve/sharp), this method SHALL return `true`. The caller (`HandwritingAnimator`) SHALL pre-compute the mean stroke duration from the sequence before starting animation, and when scribble mode is active SHALL call `SoundEngine.playScribble()` once at the start of the write and run the animation with no per-stroke sounds. `playScribble()` SHALL randomly select one clip from `SoundConfig.scribble` and play it as a fire-and-forget single shot for the entire redraw.
 
-#### Scenario: Shuffle mode activates at high speed
-- **WHEN** strokes average 80ms and the shortest clip is 400ms (threshold: 200ms)
-- **THEN** the engine enters shuffle mode and ignores stroke type for clip selection
+#### Scenario: Scribble mode detected before animation starts
+- **WHEN** the mean stroke duration is 80ms and the shortest stroke-type clip is 400ms (threshold: 200ms)
+- **THEN** `isScribbleMode(80)` returns `true` and `playScribble()` is called once before animation begins
 
-#### Scenario: Clips cycle in shuffle mode without back-to-back repeats at boundary
-- **WHEN** shuffle mode is active and the queue is exhausted
-- **THEN** the queue is re-randomized such that the first clip of the new queue differs from the last clip of the previous queue
+#### Scenario: One scribble clip chosen randomly
+- **WHEN** `SoundConfig.scribble` contains two clips and scribble mode is active
+- **THEN** one of the two clips is selected at random and played once at the start of the write
 
-#### Scenario: Shuffle mode deactivates when speed decreases
-- **WHEN** strokes that were averaging 80ms slow to 300ms (above 200ms threshold)
-- **THEN** the engine exits shuffle mode and resumes type-based selection
+#### Scenario: Normal mode used when strokes are slow enough
+- **WHEN** the mean stroke duration exceeds half the shortest clip duration
+- **THEN** `isScribbleMode()` returns `false` and per-stroke type-based playback is used instead
 
 ---
 

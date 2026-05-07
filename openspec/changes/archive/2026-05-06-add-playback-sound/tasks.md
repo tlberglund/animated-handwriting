@@ -54,7 +54,7 @@
 ## 8. Manual Verification
 
 - [x] 8.1 Add test MP3 clips to `demo/` and update `demo/index.html` to pass a `sounds` config
-- [ ] 8.2 Verify audio plays in demo page at normal speed with type-based clip selection
-- [ ] 8.3 Verify shuffle mode activates at high speed (speed ≥ 5×) and produces varied audio
-- [ ] 8.4 Verify silent animation when `sounds` is omitted (no console errors)
-- [ ] 8.5 Verify Reveal.js demo slide plays audio on slide entry and fragment reveal
+- [x] 8.2 Verify audio plays in demo page at normal speed with type-based clip selection
+- [x] 8.3 Verify shuffle mode activates at high speed (speed ≥ 5×) and produces varied audio
+- [x] 8.4 Verify silent animation when `sounds` is omitted (no console errors)
+- [x] 8.5 Verify Reveal.js demo slide plays audio on slide entry and fragment reveal
