@@ -23,6 +23,22 @@ export interface GlyphSet {
     captureSetName: string;
     glyphs: Record<string, ExportGlyph>;
 }
+export type StrokeType = 'straight' | 'curve' | 'sharp';
+export interface SoundConfig {
+    /** MP3 URLs to play for straight-line strokes */
+    straight?: string[];
+    /** MP3 URLs to play for curved strokes */
+    curve?: string[];
+    /** MP3 URLs to play for sharp-angle strokes */
+    sharp?: string[];
+    /** MP3 URLs for high-speed fallback: one clip plays for the full redraw duration */
+    scribble?: string[];
+    /** Angular thresholds in degrees (default: straight=15, sharp=60) */
+    thresholds?: {
+        straight: number;
+        sharp: number;
+    };
+}
 export interface WriteOptions {
     /** Speed multiplier. Default 1.5 */
     speed?: number;
@@ -42,6 +58,8 @@ export interface WriteOptions {
     capHeight?: number;
     /** Vertical offset in CSS pixels from the top of the canvas to the cap-height line. Default 12 */
     topPad?: number;
+    /** Sound clips to play during stroke rendering. Pass `true` to use bundled defaults. */
+    sounds?: SoundConfig | true;
 }
 export interface SequencedGlyph {
     character: string;

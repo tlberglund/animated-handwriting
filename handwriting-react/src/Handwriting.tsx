@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { HandwritingAnimator } from '@tlberglund/handwriting-playback';
+import { HandwritingAnimator, SoundEngine, defaultSounds } from '@tlberglund/handwriting-playback';
 import type { GlyphSet } from '@tlberglund/handwriting-playback';
 import type { HandwritingHandle, HandwritingProps } from './types';
 
@@ -22,6 +22,7 @@ export const Handwriting = forwardRef<HandwritingHandle, HandwritingProps>(
       maxWidth,
       letterGap,
       wordGap,
+      sounds,
       playOn = 'visible',
       onComplete,
       onError,
@@ -34,6 +35,7 @@ export const Handwriting = forwardRef<HandwritingHandle, HandwritingProps>(
     );
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
     const hasPlayedRef = useRef(false);
     const observerRef = useRef<IntersectionObserver | null>(null);
     const cancelRef = useRef<(() => void) | null>(null);
@@ -60,6 +62,15 @@ export const Handwriting = forwardRef<HandwritingHandle, HandwritingProps>(
       return () => { cancelled = true; };
     }, [glyphSet]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Preload sound clips when sounds config is provided or changes
+    useEffect(() => {
+      if (!sounds) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const config = sounds === true ? defaultSounds : sounds;
+      const engine = new SoundEngine(audioCtxRef.current, config);
+      engine.preload();
+    }, [sounds]); // eslint-disable-line react-hooks/exhaustive-deps
+
     function triggerPlay(data: GlyphSet) {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -78,7 +89,7 @@ export const Handwriting = forwardRef<HandwritingHandle, HandwritingProps>(
 
       const animator = new HandwritingAnimator(canvas, data);
       const promise = animator.write(text, {
-        speed, color, capHeight, topPad, minWidth, maxWidth, letterGap, wordGap,
+        speed, color, capHeight, topPad, minWidth, maxWidth, letterGap, wordGap, sounds,
       });
 
       cancelRef.current = () => { canvas.width = canvas.width; };

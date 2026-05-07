@@ -1,2 +1,4 @@
 export { HandwritingAnimator } from './HandwritingAnimator';
-export type { GlyphSet, ExportGlyph, ExportCapture, ExportPoint, WriteOptions, SequencedGlyph } from './types';
+export { SoundEngine } from './SoundEngine';
+export { defaultSounds } from './defaultSounds';
+export type { GlyphSet, ExportGlyph, ExportCapture, ExportPoint, WriteOptions, SequencedGlyph, SoundConfig, StrokeType } from './types';

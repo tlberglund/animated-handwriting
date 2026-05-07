@@ -22,10 +22,10 @@
   "keywords": ["handwriting", "animation", "canvas", "typescript"],
   "publishConfig": { "access": "public" },
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --outfile=dist/handwriting-animator.js --format=iife --global-name=HandwritingAnimatorLib",
-    "build:esm": "esbuild src/index.ts --bundle --outfile=dist/handwriting-animator.esm.js --format=esm",
+    "build": "esbuild src/index.ts --bundle --loader:.mp3=dataurl --outfile=dist/handwriting-animator.js --format=iife --global-name=HandwritingAnimatorLib",
+    "build:esm": "esbuild src/index.ts --bundle --loader:.mp3=dataurl --outfile=dist/handwriting-animator.esm.js --format=esm",
     "build:types": "tsc --emitDeclarationOnly",
-    "watch": "esbuild src/index.ts --bundle --outfile=dist/handwriting-animator.js --format=iife --global-name=HandwritingAnimatorLib --watch"
+    "watch": "esbuild src/index.ts --bundle --loader:.mp3=dataurl --outfile=dist/handwriting-animator.js --format=iife --global-name=HandwritingAnimatorLib --watch"
   },
   "devDependencies": {
     "esbuild": "^0.20.0",

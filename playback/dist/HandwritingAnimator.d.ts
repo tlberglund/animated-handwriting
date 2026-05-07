@@ -4,6 +4,7 @@ export declare class HandwritingAnimator {
     private canvas;
     private ctx;
     private lastUsedCapture;
+    private audioCtx;
     constructor(canvas: HTMLCanvasElement, glyphSet: GlyphSet);
     write(text: string, options?: WriteOptions): Promise<void>;
     private resolveOptions;
@@ -11,6 +12,7 @@ export declare class HandwritingAnimator {
     private tokenize;
     private buildSequence;
     private pickCapture;
+    private meanStrokeDuration;
     private smoothPoints;
     private animate;
     private drawSegment;

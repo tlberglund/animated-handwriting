@@ -1,4 +1,4 @@
-import type { GlyphSet } from '@tlberglund/handwriting-playback';
+import type { GlyphSet, SoundConfig } from '@tlberglund/handwriting-playback';
 import type { CSSProperties } from 'react';
 
 export interface HandwritingProps {
@@ -12,6 +12,8 @@ export interface HandwritingProps {
   maxWidth?: number;
   letterGap?: number;
   wordGap?: number;
+  /** Pass `true` to use bundled default sounds, or a SoundConfig for custom clips. */
+  sounds?: SoundConfig | true;
   playOn?: 'visible' | 'mount';
   onComplete?: () => void;
   onError?: (err: Error) => void;

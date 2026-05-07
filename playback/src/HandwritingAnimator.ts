@@ -1,10 +1,16 @@
-import { GlyphSet, WriteOptions, ExportPoint, ExportCapture, SequencedGlyph } from './types';
+import { GlyphSet, WriteOptions, ExportPoint, ExportCapture, SequencedGlyph, SoundConfig } from './types';
+import { SoundEngine } from './SoundEngine';
+import { classifyStroke } from './StrokeClassifier';
+import { defaultSounds } from './defaultSounds';
+
+type ResolvedOptions = Required<Omit<WriteOptions, 'sounds'>> & { sounds?: SoundConfig };
 
 export class HandwritingAnimator {
    private glyphSet: GlyphSet;
    private canvas: HTMLCanvasElement;
    private ctx: CanvasRenderingContext2D;
    private lastUsedCapture: Map<string, string> = new Map();
+   private audioCtx: AudioContext | null = null;
 
    constructor(canvas: HTMLCanvasElement, glyphSet: GlyphSet) {
       this.canvas   = canvas;
@@ -16,19 +22,32 @@ export class HandwritingAnimator {
 
    // ── Public API ─────────────────────────────────────────────────────────────
 
-   write(text: string, options: WriteOptions = {}): Promise<void> {
+   async write(text: string, options: WriteOptions = {}): Promise<void> {
       const opts = this.resolveOptions(options);
       this.prepareCanvas(opts);
 
       const sequence = this.buildSequence(text, opts);
-      if(sequence.length === 0) return Promise.resolve();
+      if(sequence.length === 0) return;
 
-      return this.animate(sequence, opts);
+      if(opts.sounds) {
+         if(!this.audioCtx) this.audioCtx = new AudioContext();
+         const soundEngine = new SoundEngine(this.audioCtx, opts.sounds);
+         await soundEngine.preload();
+
+         const meanMs = this.meanStrokeDuration(sequence, opts.speed);
+         if(soundEngine.isScribbleMode(meanMs)) {
+            soundEngine.playScribble();
+            return this.animate(sequence, opts, null);
+         }
+         return this.animate(sequence, opts, soundEngine);
+      }
+
+      return this.animate(sequence, opts, null);
    }
 
    // ── Options ────────────────────────────────────────────────────────────────
 
-   private resolveOptions(options: WriteOptions): Required<WriteOptions> {
+   private resolveOptions(options: WriteOptions): ResolvedOptions {
       return {
          speed:      options.speed      ?? 1.5,
          color:      options.color      ?? '#1a1a1a',
@@ -39,12 +58,13 @@ export class HandwritingAnimator {
          wordGap:    options.wordGap    ?? 0.35,
          capHeight:  options.capHeight  ?? 80,
          topPad:     options.topPad     ?? 12,
+         sounds:     options.sounds === true ? defaultSounds : options.sounds,
       };
    }
 
    // ── Canvas setup ───────────────────────────────────────────────────────────
 
-   private prepareCanvas(opts: Required<WriteOptions>): void {
+   private prepareCanvas(opts: ResolvedOptions): void {
       const cssW = this.canvas.clientWidth  || this.canvas.width;
       const cssH = this.canvas.clientHeight || this.canvas.height;
       this.canvas.width  = cssW * opts.scale;
@@ -82,7 +102,7 @@ export class HandwritingAnimator {
 
    // ── Glyph sequencing ───────────────────────────────────────────────────────
 
-   private buildSequence(text: string, opts: Required<WriteOptions>): SequencedGlyph[] {
+   private buildSequence(text: string, opts: ResolvedOptions): SequencedGlyph[] {
       const tokens   = this.tokenize(text);
       const sequence: SequencedGlyph[] = [];
       let xOffset = 0;
@@ -124,6 +144,21 @@ export class HandwritingAnimator {
       return chosen;
    }
 
+   // ── Stroke duration ────────────────────────────────────────────────────────
+
+   private meanStrokeDuration(sequence: SequencedGlyph[], speed: number): number {
+      let total = 0;
+      let count = 0;
+      for(const sg of sequence) {
+         for(const stroke of sg.capture.strokes) {
+            if(stroke.length < 2) continue;
+            total += (stroke[stroke.length - 1].t - stroke[0].t) / speed;
+            count++;
+         }
+      }
+      return count > 0 ? total / count : 0;
+   }
+
    // ── Smoothing ──────────────────────────────────────────────────────────────
 
    private smoothPoints(points: ExportPoint[]): ExportPoint[] {
@@ -143,69 +178,91 @@ export class HandwritingAnimator {
 
    // ── Animation ──────────────────────────────────────────────────────────────
 
-   private animate(sequence: SequencedGlyph[], opts: Required<WriteOptions>): Promise<void> {
+   private animate(
+      sequence: SequencedGlyph[],
+      opts: ResolvedOptions,
+      soundEngine: SoundEngine | null,
+   ): Promise<void> {
       return new Promise(resolve => {
-         // Flatten all draw events into a timeline
          interface DrawEvent {
             fromX: number; fromY: number;
             toX:   number; toY:   number;
             pressure: number;
             t: number;   // wall-clock ms (scaled by speed)
          }
+         interface SoundEvent {
+            strokeType: import('./types').StrokeType;
+            t: number;
+         }
 
-         const events: DrawEvent[] = [];
+         const drawEvents:  DrawEvent[]  = [];
+         const soundEvents: SoundEvent[] = [];
          let globalTOffset = 0;
 
          for(const seqGlyph of sequence) {
             const capHeight = opts.capHeight;
             const xOrigin   = seqGlyph.xOffset * capHeight;
-
-            const capture = seqGlyph.capture;
+            const capture   = seqGlyph.capture;
             let captureStart: number | null = null;
 
             for(const stroke of capture.strokes) {
                const smoothed = this.smoothPoints(stroke);
+
                for(let i = 1; i < smoothed.length; i++) {
                   const prev = smoothed[i - 1];
                   const curr = smoothed[i];
 
                   if(captureStart === null) captureStart = prev.t;
-                  const relT = curr.t - captureStart;
+                  const wallT = globalTOffset + (curr.t - captureStart) / opts.speed;
 
-                  events.push({
+                  if(i === 1 && soundEngine) {
+                     const strokeType = classifyStroke(
+                        smoothed,
+                        opts.sounds?.thresholds?.straight,
+                        opts.sounds?.thresholds?.sharp,
+                     );
+                     soundEvents.push({ strokeType, t: wallT });
+                  }
+
+                  drawEvents.push({
                      fromX:    xOrigin + prev.x * capHeight,
                      fromY:    opts.topPad + prev.y * capHeight,
                      toX:      xOrigin + curr.x * capHeight,
                      toY:      opts.topPad + curr.y * capHeight,
                      pressure: curr.p,
-                     t:        globalTOffset + relT / opts.speed,
+                     t:        wallT,
                   });
                }
             }
 
-            // Advance globalTOffset by the duration of this capture + a small inter-glyph gap
-            const lastStroke    = capture.strokes[capture.strokes.length - 1];
-            const lastPoint     = lastStroke?.[lastStroke.length - 1];
-            const firstPoint    = capture.strokes[0]?.[0];
-            const captureDurMs  = firstPoint && lastPoint
+            const lastStroke   = capture.strokes[capture.strokes.length - 1];
+            const lastPoint    = lastStroke?.[lastStroke.length - 1];
+            const firstPoint   = capture.strokes[0]?.[0];
+            const captureDurMs = firstPoint && lastPoint
                ? (lastPoint.t - firstPoint.t) / opts.speed
                : 0;
-            globalTOffset += captureDurMs + (30 / opts.speed);  // 30ms inter-glyph pause
+            globalTOffset += captureDurMs + (30 / opts.speed);
          }
 
-         if(events.length === 0) { resolve(); return; }
+         if(drawEvents.length === 0) { resolve(); return; }
 
          const startTime = performance.now();
 
          const frame = () => {
             const elapsed = performance.now() - startTime;
 
-            while(events.length > 0 && events[0].t <= elapsed) {
-               const ev = events.shift()!;
+            // Fire sound events
+            while(soundEvents.length > 0 && soundEvents[0].t <= elapsed) {
+               const ev = soundEvents.shift()!;
+               soundEngine?.playForStroke(ev.strokeType);
+            }
+
+            while(drawEvents.length > 0 && drawEvents[0].t <= elapsed) {
+               const ev = drawEvents.shift()!;
                this.drawSegment(ev.fromX, ev.fromY, ev.toX, ev.toY, ev.pressure, opts);
             }
 
-            if(events.length > 0) {
+            if(drawEvents.length > 0) {
                requestAnimationFrame(frame);
             }
             else {
@@ -221,7 +278,7 @@ export class HandwritingAnimator {
       fromX: number, fromY: number,
       toX:   number, toY:   number,
       pressure: number,
-      opts: Required<WriteOptions>
+      opts: ResolvedOptions
    ): void {
       const lw = opts.minWidth + pressure * (opts.maxWidth - opts.minWidth);
       this.ctx.lineCap     = 'round';

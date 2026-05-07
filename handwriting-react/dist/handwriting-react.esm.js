@@ -6,7 +6,7 @@ import {
   useRef,
   useState
 } from "react";
-import { HandwritingAnimator } from "@tlberglund/handwriting-playback";
+import { HandwritingAnimator, SoundEngine, defaultSounds } from "@tlberglund/handwriting-playback";
 import { jsx } from "react/jsx-runtime";
 var Handwriting = forwardRef(
   function Handwriting2(props, ref) {
@@ -21,6 +21,7 @@ var Handwriting = forwardRef(
       maxWidth,
       letterGap,
       wordGap,
+      sounds,
       playOn = "visible",
       onComplete,
       onError,
@@ -31,6 +32,7 @@ var Handwriting = forwardRef(
       typeof glyphSet === "string" ? null : glyphSet
     );
     const canvasRef = useRef(null);
+    const audioCtxRef = useRef(null);
     const hasPlayedRef = useRef(false);
     const observerRef = useRef(null);
     const cancelRef = useRef(null);
@@ -59,6 +61,15 @@ var Handwriting = forwardRef(
         cancelled = true;
       };
     }, [glyphSet]);
+    useEffect(() => {
+      if (!sounds)
+        return;
+      if (!audioCtxRef.current)
+        audioCtxRef.current = new AudioContext();
+      const config = sounds === true ? defaultSounds : sounds;
+      const engine = new SoundEngine(audioCtxRef.current, config);
+      engine.preload();
+    }, [sounds]);
     function triggerPlay(data) {
       const canvas = canvasRef.current;
       if (!canvas)
@@ -81,7 +92,8 @@ var Handwriting = forwardRef(
         minWidth,
         maxWidth,
         letterGap,
-        wordGap
+        wordGap,
+        sounds
       });
       cancelRef.current = () => {
         canvas.width = canvas.width;

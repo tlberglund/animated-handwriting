@@ -1,6 +1,6 @@
 import { HandwritingAnimator } from '@tlberglund/handwriting-playback';
 import { DiagramAnimator } from '@tlberglund/diagram-playback';
-import type { GlyphSet } from '@tlberglund/handwriting-playback';
+import type { GlyphSet, SoundConfig } from '@tlberglund/handwriting-playback';
 import type { DiagramExport } from '@tlberglund/diagram-playback';
 
 interface PluginConfig {
@@ -9,6 +9,8 @@ interface PluginConfig {
   capHeight?: number;
   color?: string;
   topPad?: number;
+  /** Sound clips to play during handwriting stroke rendering. Pass `true` to use bundled defaults. */
+  sounds?: SoundConfig | true;
 }
 
 interface ResolvedOptions {
@@ -16,6 +18,7 @@ interface ResolvedOptions {
   speed: number;
   capHeight: number;
   color: string;
+  sounds?: SoundConfig | true;
 }
 
 // ── Dimension resolution ─────────────────────────────────────────────────────
@@ -90,6 +93,20 @@ function loadDiagram(url: string): Promise<DiagramExport> {
 
 // ── Option resolution ────────────────────────────────────────────────────────
 
+function resolveSounds(canvas: HTMLCanvasElement, pluginConfig: PluginConfig): SoundConfig | true | undefined {
+  const raw = canvas.dataset.sounds;
+  if(raw === undefined) return pluginConfig.sounds;
+  if(raw === 'null' || raw === 'false') return undefined;
+  if(raw === 'true') return true;
+  try {
+    return JSON.parse(raw) as SoundConfig;
+  }
+  catch {
+    console.warn('[HandwritingReveal] Invalid data-sounds JSON on canvas (using plugin-level sounds):', canvas);
+    return pluginConfig.sounds;
+  }
+}
+
 function resolveOptions(canvas: HTMLCanvasElement, pluginConfig: PluginConfig): ResolvedOptions | null {
   const glyphSetUrl = canvas.dataset.glyphSet ?? pluginConfig.glyphSet;
   if(!glyphSetUrl) {
@@ -99,7 +116,8 @@ function resolveOptions(canvas: HTMLCanvasElement, pluginConfig: PluginConfig): 
   const speed     = parseFloat(canvas.dataset.speed     ?? '') || (pluginConfig.speed     ?? 1.5);
   const capHeight = parseFloat(canvas.dataset.capHeight ?? '') || (pluginConfig.capHeight ?? 80);
   const color     =            canvas.dataset.color     ?? pluginConfig.color            ?? '#1a1a1a';
-  return { glyphSetUrl, speed, capHeight, color };
+  const sounds    = resolveSounds(canvas, pluginConfig);
+  return { glyphSetUrl, speed, capHeight, color, sounds };
 }
 
 // ── Fragment detection ───────────────────────────────────────────────────────
@@ -141,6 +159,7 @@ async function animateCanvas(canvas: HTMLCanvasElement, pluginConfig: PluginConf
     speed:     opts.speed,
     capHeight: opts.capHeight,
     color:     opts.color,
+    sounds:    opts.sounds,
   });
 }
 

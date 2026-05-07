@@ -165,13 +165,32 @@
          padding: 14px 16px;
       }
 
-      #data-source h3 {
-         font-size: 13px;
-         color: #888;
+      .source-tabs {
+         display: flex;
+         gap: 4px;
+         margin-bottom: 12px;
+      }
+
+      .source-tab {
+         padding: 5px 14px;
+         font-size: 12px;
          text-transform: uppercase;
          letter-spacing: 0.5px;
-         margin-bottom: 10px;
+         border: 1px solid #ddd;
+         border-radius: 6px;
+         background: white;
+         color: #888;
+         cursor: pointer;
+         transition: all 0.15s;
       }
+      .source-tab.active {
+         background: #555;
+         border-color: #555;
+         color: white;
+      }
+
+      .source-panel { display: none; }
+      .source-panel.active { display: block; }
 
       .source-row {
          display: flex;
@@ -180,7 +199,7 @@
          flex-wrap: wrap;
       }
 
-      #api-url {
+      #api-url, #json-url {
          flex: 1;
          min-width: 200px;
          padding: 8px 12px;
@@ -198,7 +217,7 @@
          background: white;
       }
 
-      #btn-load {
+      #btn-load, #btn-load-json {
          padding: 8px 16px;
          background: #555;
          color: white;
@@ -208,10 +227,23 @@
          cursor: pointer;
       }
 
+      #btn-browse {
+         padding: 8px 16px;
+         background: white;
+         color: #555;
+         border: 1px solid #ddd;
+         border-radius: 8px;
+         font-size: 14px;
+         cursor: pointer;
+      }
+      #btn-browse:hover { background: #f5f5f5; }
+
+      #file-input { display: none; }
+
       #status {
          font-size: 13px;
          color: #888;
-         margin-top: 6px;
+         margin-top: 8px;
       }
       #status.ok  { color: #34c759; }
       #status.err { color: #ff3b30; }
@@ -263,12 +295,28 @@
 
    <!-- Data source -->
    <div id="data-source">
-      <h3>Glyph Set Source</h3>
-      <div class="source-row">
-         <input type="text" id="api-url" value="http://localhost:8080/api" placeholder="API base URL">
-         <select id="set-select"><option value="">— load sets —</option></select>
-         <button id="btn-load">Load</button>
+      <div class="source-tabs">
+         <button class="source-tab active" data-panel="backend">Backend</button>
+         <button class="source-tab" data-panel="json">JSON File</button>
       </div>
+
+      <div class="source-panel active" id="panel-backend">
+         <div class="source-row">
+            <input type="text" id="api-url" value="http://localhost:8080/api" placeholder="API base URL">
+            <select id="set-select"><option value="">— load sets —</option></select>
+            <button id="btn-load">Load</button>
+         </div>
+      </div>
+
+      <div class="source-panel" id="panel-json">
+         <div class="source-row">
+            <input type="text" id="json-url" value="./hand.json" placeholder="Path or URL to glyph set JSON">
+            <button id="btn-load-json">Load URL</button>
+            <button id="btn-browse">Browse…</button>
+            <input type="file" id="file-input" accept=".json">
+         </div>
+      </div>
+
       <div id="status">No glyph set loaded.</div>
    </div>
 
@@ -321,6 +369,7 @@
             speed:     parseFloat(speedSlider.value),
             capHeight: parseInt(capHtSlider.value),
             scale:     renderScale,
+            sounds:    true,
          });
          isAnimating = false;
          btnAnimate.disabled = false;
@@ -333,6 +382,16 @@
       btnClear.addEventListener('click', () => {
          const ctx = outputCanvas.getContext('2d');
          ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+      });
+
+      // ── Source tabs ───────────────────────────────────────────────────────
+      document.querySelectorAll('.source-tab').forEach(tab => {
+         tab.addEventListener('click', () => {
+            document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.source-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`panel-${tab.dataset.panel}`).classList.add('active');
+         });
       });
 
       // ── Backend loading ───────────────────────────────────────────────────
@@ -370,6 +429,50 @@
       });
 
       btnLoad.addEventListener('click', loadSets);
+
+      // ── JSON file loading ─────────────────────────────────────────────────
+      const jsonUrlInput  = document.getElementById('json-url');
+      const btnLoadJson   = document.getElementById('btn-load-json');
+      const btnBrowse     = document.getElementById('btn-browse');
+      const fileInput     = document.getElementById('file-input');
+
+      async function loadJsonFromUrl(url) {
+         try {
+            const res = await fetch(url);
+            if(!res.ok) throw new Error(`HTTP ${res.status}`);
+            glyphSet = await res.json();
+            animator = new HandwritingAnimator(outputCanvas, glyphSet);
+            setStatus(`Loaded: ${glyphSet.captureSetName} (${Object.keys(glyphSet.glyphs).length} glyphs)`, 'ok');
+         }
+         catch(e) { setStatus(`Failed to load JSON: ${e.message}`, 'err'); }
+      }
+
+      btnLoadJson.addEventListener('click', () => {
+         const url = jsonUrlInput.value.trim();
+         if(url) loadJsonFromUrl(url);
+      });
+
+      jsonUrlInput.addEventListener('keydown', e => {
+         if(e.key === 'Enter') btnLoadJson.click();
+      });
+
+      btnBrowse.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', () => {
+         const file = fileInput.files[0];
+         if(!file) return;
+         const reader = new FileReader();
+         reader.onload = e => {
+            try {
+               glyphSet = JSON.parse(e.target.result);
+               animator = new HandwritingAnimator(outputCanvas, glyphSet);
+               setStatus(`Loaded: ${glyphSet.captureSetName} (${Object.keys(glyphSet.glyphs).length} glyphs)`, 'ok');
+            }
+            catch { setStatus('Failed to parse JSON file', 'err'); }
+         };
+         reader.readAsText(file);
+         fileInput.value = '';
+      });
 
       function setStatus(msg, cls = '') {
          statusEl.textContent  = msg;
