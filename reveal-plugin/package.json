@@ -1,6 +1,6 @@
 {
   "name": "@tlberglund/handwriting-reveal",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "description": "Reveal.js plugin for handwriting and diagram animation",
   "main": "dist/handwriting-reveal.js",
   "module": "dist/handwriting-reveal.esm.js",

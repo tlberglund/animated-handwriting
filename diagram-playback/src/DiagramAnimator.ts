@@ -26,6 +26,7 @@ export class DiagramAnimator {
 
       if(this.diagram.strokes.length === 0) return Promise.resolve();
 
+      if(opts.instant) return this.drawInstant(opts);
       return this.animate(opts);
    }
 
@@ -38,6 +39,7 @@ export class DiagramAnimator {
          minWidth: options.minWidth ?? 1.5,
          maxWidth: options.maxWidth ?? 3,
          scale:    options.scale    ?? 2,
+         instant:  options.instant  ?? false,
       };
    }
 
@@ -96,6 +98,31 @@ export class DiagramAnimator {
             p: pt.p,
          };
       });
+   }
+
+   // ── Instant render ─────────────────────────────────────────────────────────
+
+   private drawInstant(opts: Required<DiagramPlayOptions>): Promise<void> {
+      const { renderW, renderH, offsetX, offsetY } = this.computeFitRect();
+
+      for(const stroke of this.diagram.strokes) {
+         if(stroke.length < 2) continue;
+         const smoothed = this.smoothPoints(stroke);
+         for(let i = 1; i < smoothed.length; i++) {
+            const prev = smoothed[i - 1];
+            const curr = smoothed[i];
+            this.drawSegment(
+               offsetX + prev.x * renderW,
+               offsetY + prev.y * renderH,
+               offsetX + curr.x * renderW,
+               offsetY + curr.y * renderH,
+               curr.p,
+               opts,
+            );
+         }
+      }
+
+      return Promise.resolve();
    }
 
    // ── Animation ──────────────────────────────────────────────────────────────

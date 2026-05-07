@@ -68,10 +68,25 @@ export interface WriteOptions {
    wordGap?: number;
    /** Cap-height in canvas CSS pixels. Default 80 */
    capHeight?: number;
-   /** Vertical offset in CSS pixels from the top of the canvas to the cap-height line. Default 12 */
+   /** Vertical offset in CSS pixels from the top of the canvas to the cap-height line. Default 12.
+    *  Ignored when `y` is provided. */
    topPad?: number;
+   /**
+    * CSS pixel X position of the left edge of the first character.
+    * When provided, `prepareCanvas()` is skipped — the caller owns the canvas.
+    * Default: 0 (left edge of canvas, canvas is reset before drawing).
+    */
+   x?: number;
+   /**
+    * CSS pixel Y position of the cap-height line.
+    * When provided, `prepareCanvas()` is skipped — the caller owns the canvas.
+    * Default: value of `topPad` (canvas is reset before drawing).
+    */
+   y?: number;
    /** Sound clips to play during stroke rendering. Pass `true` to use bundled defaults. */
    sounds?: SoundConfig | true;
+   /** When true, draw all strokes synchronously in one frame with no animation delay. Sounds are suppressed. */
+   instant?: boolean;
 }
 
 // ── Internal sequencer types ──────────────────────────────────────────────────

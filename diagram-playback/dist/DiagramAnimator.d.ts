@@ -9,6 +9,7 @@ export declare class DiagramAnimator {
     private prepareCanvas;
     private computeFitRect;
     private smoothPoints;
+    private drawInstant;
     private animate;
     private drawSegment;
 }

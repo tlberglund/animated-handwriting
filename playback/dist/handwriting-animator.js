@@ -235,10 +235,13 @@ var HandwritingAnimatorLib = (() => {
     // ── Public API ─────────────────────────────────────────────────────────────
     async write(text, options = {}) {
       const opts = this.resolveOptions(options);
-      this.prepareCanvas(opts);
+      if (options.x === void 0 && options.y === void 0)
+        this.prepareCanvas(opts);
       const sequence = this.buildSequence(text, opts);
       if (sequence.length === 0)
         return;
+      if (opts.instant)
+        return this.drawInstant(sequence, opts);
       if (opts.sounds) {
         if (!this.audioCtx)
           this.audioCtx = new AudioContext();
@@ -265,7 +268,10 @@ var HandwritingAnimatorLib = (() => {
         wordGap: options.wordGap ?? 0.35,
         capHeight: options.capHeight ?? 80,
         topPad: options.topPad ?? 12,
-        sounds: options.sounds === true ? defaultSounds : options.sounds
+        sounds: options.sounds === true ? defaultSounds : options.sounds,
+        x: options.x,
+        y: options.y,
+        instant: options.instant ?? false
       };
     }
     // ── Canvas setup ───────────────────────────────────────────────────────────
@@ -370,15 +376,42 @@ var HandwritingAnimatorLib = (() => {
         };
       });
     }
+    // ── Instant render ─────────────────────────────────────────────────────────
+    drawInstant(sequence, opts) {
+      const baseX = opts.x ?? 0;
+      const baseY = opts.y ?? opts.topPad;
+      for (const seqGlyph of sequence) {
+        const capHeight = opts.capHeight;
+        const xOrigin = baseX + seqGlyph.xOffset * capHeight;
+        for (const stroke of seqGlyph.capture.strokes) {
+          const smoothed = this.smoothPoints(stroke);
+          for (let i = 1; i < smoothed.length; i++) {
+            const prev = smoothed[i - 1];
+            const curr = smoothed[i];
+            this.drawSegment(
+              xOrigin + prev.x * capHeight,
+              baseY + prev.y * capHeight,
+              xOrigin + curr.x * capHeight,
+              baseY + curr.y * capHeight,
+              curr.p,
+              opts
+            );
+          }
+        }
+      }
+      return Promise.resolve();
+    }
     // ── Animation ──────────────────────────────────────────────────────────────
     animate(sequence, opts, soundEngine) {
       return new Promise((resolve) => {
         const drawEvents = [];
         const soundEvents = [];
         let globalTOffset = 0;
+        const baseX = opts.x ?? 0;
+        const baseY = opts.y ?? opts.topPad;
         for (const seqGlyph of sequence) {
           const capHeight = opts.capHeight;
-          const xOrigin = seqGlyph.xOffset * capHeight;
+          const xOrigin = baseX + seqGlyph.xOffset * capHeight;
           const capture = seqGlyph.capture;
           let captureStart = null;
           for (const stroke of capture.strokes) {
@@ -399,9 +432,9 @@ var HandwritingAnimatorLib = (() => {
               }
               drawEvents.push({
                 fromX: xOrigin + prev.x * capHeight,
-                fromY: opts.topPad + prev.y * capHeight,
+                fromY: baseY + prev.y * capHeight,
                 toX: xOrigin + curr.x * capHeight,
-                toY: opts.topPad + curr.y * capHeight,
+                toY: baseY + curr.y * capHeight,
                 pressure: curr.p,
                 t: wallT
               });

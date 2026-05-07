@@ -1,6 +1,6 @@
 {
   "name": "@tlberglund/handwriting-react",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "description": "React component for handwriting animation",
   "main": "dist/handwriting-react.esm.js",
   "module": "dist/handwriting-react.esm.js",

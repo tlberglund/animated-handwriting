@@ -16,4 +16,6 @@ export interface DiagramPlayOptions {
     minWidth?: number;
     maxWidth?: number;
     scale?: number;
+    /** When true, draw all strokes synchronously in one frame with no animation delay. */
+    instant?: boolean;
 }

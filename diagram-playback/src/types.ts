@@ -18,4 +18,6 @@ export interface DiagramPlayOptions {
    minWidth?: number; // default 1.5
    maxWidth?: number; // default 3
    scale?: number;    // device pixel ratio; default 2
+   /** When true, draw all strokes synchronously in one frame with no animation delay. */
+   instant?: boolean;
 }

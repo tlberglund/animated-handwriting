@@ -14,6 +14,7 @@ export declare class HandwritingAnimator {
     private pickCapture;
     private meanStrokeDuration;
     private smoothPoints;
+    private drawInstant;
     private animate;
     private drawSegment;
 }

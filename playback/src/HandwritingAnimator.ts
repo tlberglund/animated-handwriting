@@ -3,7 +3,7 @@ import { SoundEngine } from './SoundEngine';
 import { classifyStroke } from './StrokeClassifier';
 import { defaultSounds } from './defaultSounds';
 
-type ResolvedOptions = Required<Omit<WriteOptions, 'sounds'>> & { sounds?: SoundConfig };
+type ResolvedOptions = Required<Omit<WriteOptions, 'sounds' | 'x' | 'y'>> & { sounds?: SoundConfig; x?: number; y?: number };
 
 export class HandwritingAnimator {
    private glyphSet: GlyphSet;
@@ -24,10 +24,12 @@ export class HandwritingAnimator {
 
    async write(text: string, options: WriteOptions = {}): Promise<void> {
       const opts = this.resolveOptions(options);
-      this.prepareCanvas(opts);
+      if(options.x === undefined && options.y === undefined) this.prepareCanvas(opts);
 
       const sequence = this.buildSequence(text, opts);
       if(sequence.length === 0) return;
+
+      if(opts.instant) return this.drawInstant(sequence, opts);
 
       if(opts.sounds) {
          if(!this.audioCtx) this.audioCtx = new AudioContext();
@@ -59,6 +61,9 @@ export class HandwritingAnimator {
          capHeight:  options.capHeight  ?? 80,
          topPad:     options.topPad     ?? 12,
          sounds:     options.sounds === true ? defaultSounds : options.sounds,
+         x:          options.x,
+         y:          options.y,
+         instant:    options.instant ?? false,
       };
    }
 
@@ -176,6 +181,36 @@ export class HandwritingAnimator {
       });
    }
 
+   // ── Instant render ─────────────────────────────────────────────────────────
+
+   private drawInstant(sequence: SequencedGlyph[], opts: ResolvedOptions): Promise<void> {
+      const baseX = opts.x ?? 0;
+      const baseY = opts.y ?? opts.topPad;
+
+      for(const seqGlyph of sequence) {
+         const capHeight = opts.capHeight;
+         const xOrigin   = baseX + seqGlyph.xOffset * capHeight;
+
+         for(const stroke of seqGlyph.capture.strokes) {
+            const smoothed = this.smoothPoints(stroke);
+            for(let i = 1; i < smoothed.length; i++) {
+               const prev = smoothed[i - 1];
+               const curr = smoothed[i];
+               this.drawSegment(
+                  xOrigin + prev.x * capHeight,
+                  baseY   + prev.y * capHeight,
+                  xOrigin + curr.x * capHeight,
+                  baseY   + curr.y * capHeight,
+                  curr.p,
+                  opts,
+               );
+            }
+         }
+      }
+
+      return Promise.resolve();
+   }
+
    // ── Animation ──────────────────────────────────────────────────────────────
 
    private animate(
@@ -199,9 +234,12 @@ export class HandwritingAnimator {
          const soundEvents: SoundEvent[] = [];
          let globalTOffset = 0;
 
+         const baseX = opts.x ?? 0;
+         const baseY = opts.y ?? opts.topPad;
+
          for(const seqGlyph of sequence) {
             const capHeight = opts.capHeight;
-            const xOrigin   = seqGlyph.xOffset * capHeight;
+            const xOrigin   = baseX + seqGlyph.xOffset * capHeight;
             const capture   = seqGlyph.capture;
             let captureStart: number | null = null;
 
@@ -226,9 +264,9 @@ export class HandwritingAnimator {
 
                   drawEvents.push({
                      fromX:    xOrigin + prev.x * capHeight,
-                     fromY:    opts.topPad + prev.y * capHeight,
+                     fromY:    baseY   + prev.y * capHeight,
                      toX:      xOrigin + curr.x * capHeight,
-                     toY:      opts.topPad + curr.y * capHeight,
+                     toY:      baseY   + curr.y * capHeight,
                      pressure: curr.p,
                      t:        wallT,
                   });
