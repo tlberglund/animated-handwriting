@@ -1,6 +1,6 @@
 {
   "name": "@tlberglund/handwriting-playback",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Handwriting animation playback engine",
   "main": "dist/handwriting-animator.js",
   "module": "dist/handwriting-animator.esm.js",
@@ -12,15 +12,24 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "author": "Tim Berglund <tlberglund@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/tlberglund/animated-handwriting"
   },
-  "keywords": ["handwriting", "animation", "canvas", "typescript"],
-  "publishConfig": { "access": "public" },
+  "keywords": [
+    "handwriting",
+    "animation",
+    "canvas",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --loader:.mp3=dataurl --outfile=dist/handwriting-animator.js --format=iife --global-name=HandwritingAnimatorLib",
     "build:esm": "esbuild src/index.ts --bundle --loader:.mp3=dataurl --outfile=dist/handwriting-animator.esm.js --format=esm",

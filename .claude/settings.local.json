@@ -26,7 +26,8 @@
       "Bash(cd /Users/tlberglund/code/animated-handwriting/playback && npm install 2>&1 | tail -3 && npm run build 2>&1)",
       "Bash(npm install:*)",
       "Bash(for dir:*)",
-      "Bash(do echo:*)"
+      "Bash(do echo:*)",
+      "Bash(npm whoami *)"
     ]
   }
 }
