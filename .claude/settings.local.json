@@ -30,7 +30,9 @@
       "Bash(npm whoami *)",
       "Read(//Users/tlberglund/websites/timberglund.com/**)",
       "Bash(bash *)",
-      "Bash([ -d \"/Users/tlberglund/websites/timberglund.com/openspec/specs/$spec\" ])"
+      "Bash([ -d \"/Users/tlberglund/websites/timberglund.com/openspec/specs/$spec\" ])",
+      "Bash(grep -E \"^-.*\\\\.\\(json|yaml|yml\\)$\")",
+      "Bash(xargs ls -lh)"
     ]
   }
 }

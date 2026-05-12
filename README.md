@@ -1,42 +1,44 @@
 # animated-handwriting
 
-A system for capturing, storing, and animating handwritten text and diagrams. Users draw glyph forms (individual letter shapes) and diagrams through a web UI; the backend stores the stroke data and exposes export endpoints that return normalized JSON. Playback libraries consume that JSON and animate the strokes frame-by-frame on HTML canvas elements.
+A collection of TypeScript packages for animating handwritten text and diagrams on HTML canvases. The packages support embedding stroke-by-stroke handwriting animations in React applications, Next.js sites, and Reveal.js presentations. Animations are driven by JSON data exported from a separate capture and admin tool available at [https://timberglund.com/handwriting](https://timberglund.com/handwriting); this repository contains only the playback and rendering side of the system.
 
-The primary output is embeddable canvas animations for web pages. The main integration target is Reveal.js presentations, where canvases placed on slides animate automatically as slides advance.
+## Packages
 
-## Architecture
+| Directory | npm package | Description |
+|---|---|---|
+| [playback](./playback/README.md) | `@tlberglund/handwriting-playback` | Core animation engine for handwritten text |
+| [diagram-playback](./diagram-playback/README.md) | `@tlberglund/diagram-playback` | Core animation engine for diagrams |
+| [handwriting-react](./handwriting-react/README.md) | `@tlberglund/handwriting-react` | React component wrapping the handwriting engine |
+| [diagram-react](./diagram-react/README.md) | `@tlberglund/diagram-react` | React component wrapping the diagram engine |
+| [reveal-plugin](./reveal-plugin/README.md) | `@tlberglund/handwriting-reveal` | Reveal.js plugin for slide-driven animations |
 
-| Subproject | Description |
-|---|---|
-| [backend](./backend/README.md) | Ktor REST API with PostgreSQL storage and Flyway migrations; the central data store for all glyph sets and diagrams |
-| [capture-app](./capture-app/README.md) | React 19 / Vite web UI for recording glyph captures and drawing diagrams |
-| [playback](./playback/README.md) | Core TypeScript engine that animates handwritten text on a canvas from a glyph set export |
-| [diagram-playback](./diagram-playback/README.md) | Core TypeScript engine that animates diagrams on a canvas from a diagram export |
-| [handwriting-react](./handwriting-react/README.md) | React component wrapping `HandwritingAnimator`; drop-in for React applications |
-| [diagram-react](./diagram-react/README.md) | React component wrapping `DiagramAnimator`; drop-in for React applications |
-| [reveal-plugin](./reveal-plugin/README.md) | Reveal.js plugin that drives handwriting and diagram animations on presentation slides |
+## Data format
 
-## How the pieces fit together
+Handwriting animations are driven by glyph set JSON files exported from the capture tool. Diagram animations are driven by diagram JSON files exported from the diagram editor. Both formats are self-contained and consumed directly by the playback engines — no backend connection is required at render time.
 
-1. **Capture**: The `capture-app` communicates with the `backend` to record stroke data. For glyphs, users draw each letter multiple times; captures are stored per character under a named glyph set. For diagrams, users draw freehand and the strokes are saved as a diagram record.
+The capture tool and diagram editor, along with the backend API that stores and exports the data, live separately at [timberglund.com](https://timberglund.com). This repository has no dependency on them.
 
-2. **Export**: The `backend` normalizes stored strokes and exposes export endpoints (`GET /api/capture-sets/{id}/export` and `GET /api/diagrams/{id}/export`) that return self-contained JSON payloads suitable for playback.
+Sample JSON files and standalone HTML playground pages are in the `demo/` directory.
 
-3. **Playback**: The `playback` and `diagram-playback` packages consume those JSON exports and render animated strokes onto a canvas. Most consumers use the higher-level wrappers instead of these engines directly.
+## Getting started
 
-4. **Integration**:
-   - React apps use `handwriting-react` or `diagram-react`, which wrap the engines in components that trigger on scroll visibility.
-   - Reveal.js presentations use `reveal-plugin`, which listens to slide and fragment events and triggers animations automatically on canvas elements marked with `data-handwriting` or `data-diagram`.
+See the README in each package directory for installation instructions, API reference, and usage examples:
 
-## Quick start
+- [playback/README.md](./playback/README.md)
+- [diagram-playback/README.md](./diagram-playback/README.md)
+- [handwriting-react/README.md](./handwriting-react/README.md)
+- [diagram-react/README.md](./diagram-react/README.md)
+- [reveal-plugin/README.md](./reveal-plugin/README.md)
 
-The entire stack (backend + capture UI) runs via Docker Compose:
+## Development
+
+Each package is built independently. From within any package directory:
 
 ```bash
-docker compose up
+npm install
+npm run build
 ```
 
-- Capture app: http://localhost:5173
-- Backend API: http://localhost:8080
+All packages use [esbuild](https://esbuild.github.io/) and produce output in their respective `dist/` directories. Type declarations are generated separately via `npm run build:types`.
 
-See individual subproject READMEs for local development instructions.
+Inter-package dependencies (`handwriting-react` on `handwriting-playback`, `diagram-react` on `diagram-playback`, and `reveal-plugin` on both playback engines) are declared as `file:` references in `devDependencies` during development. Build the dependency packages first before building the packages that depend on them.

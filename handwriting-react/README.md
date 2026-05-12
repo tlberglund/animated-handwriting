@@ -1,100 +1,72 @@
-# handwriting-react
+# @tlberglund/handwriting-react
 
-React component wrapping `HandwritingAnimator` from `handwriting-playback`. Animates handwritten text on a canvas, playing when the element scrolls into view.
+React component for animated handwriting. Wraps `HandwritingAnimator` from `@tlberglund/handwriting-playback` and renders animated handwritten text on a `<canvas>` element. Supports visibility-triggered playback (starts when the element scrolls into view via `IntersectionObserver`), mount-triggered playback, and imperative replay via a ref handle.
 
 ## Installation
 
 ```bash
-# From the repo root (local path dependency)
-npm install ../handwriting-react
+npm install @tlberglund/handwriting-react @tlberglund/handwriting-playback react react-dom
 ```
 
-Add peer dependencies if not already present:
-
-```bash
-npm install react react-dom
-```
-
-## Basic Usage
+## Quick start
 
 ```tsx
-import { Handwriting } from 'handwriting-react';
-
-// Fetch your glyph set once (e.g. from your API)
-const glyphSet = await fetch('/api/glyphsets/my-set/export').then(r => r.json());
+import { Handwriting } from '@tlberglund/handwriting-react';
 
 function Hero() {
   return (
     <Handwriting
-      glyphSet={glyphSet}
-      text="Hello, world"
+      glyphSet="https://example.com/glyphs.json"
+      text="Hello world"
       style={{ width: 600, height: 130 }}
     />
   );
 }
 ```
 
-The component **does not fetch data**. Load the `GlyphSet` yourself and pass it as a prop.
+The animation starts when the element scrolls into view by default. Pass `playOn="mount"` to start immediately on mount.
 
-## Data-Fetching Pattern
+## Props reference
 
-```tsx
-import { useState, useEffect } from 'react';
-import { Handwriting } from 'handwriting-react';
-import type { GlyphSet } from 'handwriting-playback';
+| Prop | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `glyphSet` | `string \| GlyphSet` | Yes | — | URL of a glyph set JSON file, or a pre-loaded `GlyphSet` object. When a string is provided the component fetches and parses it automatically. |
+| `text` | `string` | Yes | — | The text to animate. Changing this prop after the initial play triggers a replay. |
+| `speed` | `number` | No | (animator default) | Drawing speed, forwarded directly to `HandwritingAnimator.write()`. |
+| `color` | `string` | No | (animator default) | Stroke color as any CSS color string. |
+| `capHeight` | `number` | No | (animator default) | Cap height of the rendered glyphs in canvas pixels. Controls the visual size of the lettering. |
+| `topPad` | `number` | No | (animator default) | Padding above the cap line in canvas pixels. |
+| `minWidth` | `number` | No | (animator default) | Minimum stroke width in pixels. |
+| `maxWidth` | `number` | No | (animator default) | Maximum stroke width in pixels. |
+| `letterGap` | `number` | No | (animator default) | Horizontal gap between letters, forwarded to the animator. |
+| `wordGap` | `number` | No | (animator default) | Horizontal gap between words, forwarded to the animator. |
+| `sounds` | `SoundConfig \| true` | No | `undefined` | Pass `true` to enable the bundled default sound clips, or a `SoundConfig` object to supply custom audio clips. When omitted the animation plays silently. |
+| `playOn` | `'visible' \| 'mount'` | No | `'visible'` | When to start playback. `'visible'` waits until the canvas enters the viewport via `IntersectionObserver`, with an immediate fallback if `IntersectionObserver` is unavailable. `'mount'` starts as soon as the component mounts and the glyph data is ready. |
+| `onComplete` | `() => void` | No | `undefined` | Callback invoked when the animation finishes drawing. |
+| `onError` | `(err: Error) => void` | No | `undefined` | Callback invoked if the glyph set URL fetch fails. When not provided, fetch errors are logged to `console.warn`. |
+| `className` | `string` | No | `undefined` | CSS class applied to the outer `<div>` wrapper. |
+| `style` | `CSSProperties` | No | `undefined` | Inline styles merged onto the outer `<div>` wrapper. `position: 'relative'` is always applied internally. |
 
-function AnimatedHeading({ text }: { text: string }) {
-  const [glyphSet, setGlyphSet] = useState<GlyphSet | null>(null);
+The canvas fills its wrapper `<div>` at 100% width and height. You must give the wrapper a size via `style` or `className`, otherwise the canvas will have zero dimensions and a console warning will be logged with no animation running.
 
-  useEffect(() => {
-    fetch('/api/glyphsets/my-set/export')
-      .then(r => r.json())
-      .then(setGlyphSet);
-  }, []);
+Optional animator parameters (`speed`, `color`, `capHeight`, `topPad`, `minWidth`, `maxWidth`, `letterGap`, `wordGap`, `sounds`) are forwarded as-is to `HandwritingAnimator.write()`. Refer to the `@tlberglund/handwriting-playback` documentation for their exact semantics and defaults.
 
-  if (!glyphSet) return null;
+## Imperative handle (ref)
 
-  return (
-    <Handwriting
-      glyphSet={glyphSet}
-      text={text}
-      style={{ width: 500, height: 120 }}
-    />
-  );
+The component is built with `forwardRef` and exposes a `HandwritingHandle`. Use this when you need to trigger or re-trigger playback programmatically rather than relying on scroll visibility or mount timing.
+
+```ts
+interface HandwritingHandle {
+  play(): void;
 }
 ```
 
-## Sizing
-
-You **must** set width and height on the component. The canvas fills its wrapper `<div>`, which receives your `className` and `style`. If the canvas has zero dimensions when animation triggers, a console warning is logged and no animation runs.
-
-```tsx
-// Via style
-<Handwriting style={{ width: 400, height: 100 }} ... />
-
-// Via className (Tailwind example)
-<Handwriting className="w-96 h-24" ... />
-```
-
-## `playOn` Prop
-
-| Value | Behavior |
-|-------|----------|
-| `"visible"` (default) | Plays once when the canvas first scrolls into view (IntersectionObserver). Falls back to mount if IntersectionObserver is unavailable. |
-| `"mount"` | Plays immediately in a `useEffect` on mount. |
-
-```tsx
-<Handwriting playOn="mount" glyphSet={glyphSet} text="Hi" style={{ width: 300, height: 80 }} />
-```
-
-## Imperative Ref
-
-Use a ref to replay the animation programmatically:
+**`play()`** starts the animation immediately, cancelling any animation currently in progress. If the glyph data has not yet loaded (e.g. a URL fetch is still in flight), the call is a no-op.
 
 ```tsx
 import { useRef } from 'react';
-import { Handwriting } from 'handwriting-react';
-import type { HandwritingHandle } from 'handwriting-react';
+import { Handwriting } from '@tlberglund/handwriting-react';
+import type { HandwritingHandle } from '@tlberglund/handwriting-react';
 
 function Demo() {
   const ref = useRef<HandwritingHandle>(null);
@@ -103,8 +75,9 @@ function Demo() {
     <>
       <Handwriting
         ref={ref}
-        glyphSet={glyphSet}
-        text="Replay me"
+        glyphSet="https://example.com/glyphs.json"
+        text="Hello world"
+        playOn="mount"
         style={{ width: 400, height: 100 }}
       />
       <button onClick={() => ref.current?.play()}>Replay</button>
@@ -113,21 +86,10 @@ function Demo() {
 }
 ```
 
-## Props
+## Build
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `glyphSet` | `GlyphSet` | required | Pre-loaded glyph set from the export endpoint |
-| `text` | `string` | required | Text to animate |
-| `speed` | `number` | `1.5` | Speed multiplier |
-| `color` | `string` | `'#1a1a1a'` | Stroke color |
-| `capHeight` | `number` | `80` | Cap-height in CSS pixels |
-| `topPad` | `number` | `12` | Top padding in CSS pixels |
-| `minWidth` | `number` | `2` | Minimum stroke width in px |
-| `maxWidth` | `number` | `4` | Maximum stroke width in px |
-| `letterGap` | `number` | `0.05` | Gap between letters in cap-height units |
-| `wordGap` | `number` | `0.35` | Gap between words in cap-height units |
-| `playOn` | `'visible' \| 'mount'` | `'visible'` | When to trigger animation |
-| `onComplete` | `() => void` | — | Called when animation finishes |
-| `className` | `string` | — | Applied to wrapper div |
-| `style` | `CSSProperties` | — | Applied to wrapper div |
+| Script | Output | Description |
+|--------|--------|-------------|
+| `npm run build` | `dist/handwriting-react.esm.js` | Bundles `src/index.ts` as an ES module. `react`, `react-dom`, and `@tlberglund/handwriting-playback` are externalized and must be present in the consuming project. |
+| `npm run build:types` | `dist/index.d.ts` | Emits TypeScript declaration files only, no JS output. |
+| `npm run watch` | `dist/handwriting-react.esm.js` | Same as `build` but watches for file changes and rebuilds automatically. Useful when the package is linked into another project during local development. |

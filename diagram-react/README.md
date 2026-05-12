@@ -1,96 +1,80 @@
-# diagram-react
+# @tlberglund/diagram-react
 
-React component wrapping `DiagramAnimator` from `diagram-playback`. Animates a pre-loaded diagram on a canvas, playing when the element scrolls into view.
+React component for animated diagrams. Wraps `DiagramAnimator` from `@tlberglund/diagram-playback` (elsewhere in this repo) and renders an animated diagram on a `<canvas>` element. The canvas automatically maintains the correct aspect ratio via the CSS `aspect-ratio` property derived from the diagram data, so height is always computed by the browser from whatever width you set. Supports visibility-triggered playback (starts when the element scrolls into view via `IntersectionObserver`), mount-triggered playback, and imperative replay via a ref handle.
 
 ## Installation
 
 ```bash
-# From the repo root (local path dependency)
-npm install ../diagram-react
+npm install @tlberglund/diagram-react @tlberglund/diagram-playback react react-dom
 ```
 
-Add peer dependencies if not already present:
-
-```bash
-npm install react react-dom
-```
-
-## Basic Usage
+## Quick start
 
 ```tsx
-import { Diagram } from 'diagram-react';
+import { Diagram } from '@tlberglund/diagram-react';
 
-// Fetch your diagram export once (e.g. from your API)
-const diagram = await fetch('/api/diagrams/my-diagram/export').then(r => r.json());
-
-function ArchitectureDiagram() {
+function Architecture() {
   return (
     <Diagram
-      diagram={diagram}
+      diagram="https://example.com/my-diagram.json"
       style={{ width: '100%' }}
     />
   );
 }
 ```
 
-The component **does not fetch data**. Load the `DiagramExport` yourself and pass it as a prop.
+The animation starts when the element scrolls into view by default. Pass `playOn="mount"` to start immediately on mount.
 
-## Data-Fetching Pattern
+## Props reference
 
-```tsx
-import { useState, useEffect } from 'react';
-import { Diagram } from 'diagram-react';
-import type { DiagramExport } from 'diagram-playback';
+| Prop | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `diagram` | `string \| DiagramExport` | Yes | — | URL of a diagram JSON file, or a pre-loaded `DiagramExport` object. When a string is provided the component fetches and parses it automatically. The component renders nothing until the data is available. |
+| `speed` | `number` | No | (animator default) | Drawing speed, forwarded directly to `DiagramAnimator.play()`. |
+| `color` | `string` | No | (animator default) | Stroke color as any CSS color string. |
+| `minWidth` | `number` | No | (animator default) | Minimum stroke width in pixels. |
+| `maxWidth` | `number` | No | (animator default) | Maximum stroke width in pixels. |
+| `playOn` | `'visible' \| 'mount'` | No | `'visible'` | When to start playback. `'visible'` waits until the canvas enters the viewport via `IntersectionObserver`, with an immediate fallback if `IntersectionObserver` is unavailable. `'mount'` starts as soon as the component mounts and the diagram data is ready. |
+| `onComplete` | `() => void` | No | `undefined` | Callback invoked when the animation finishes drawing. |
+| `onError` | `(err: Error) => void` | No | `undefined` | Callback invoked if the diagram URL fetch fails. When not provided, fetch errors are logged to `console.warn`. |
+| `className` | `string` | No | `undefined` | CSS class applied directly to the `<canvas>` element. |
+| `style` | `CSSProperties` | No | `undefined` | Inline styles merged onto the `<canvas>` element. The `aspect-ratio` property is always set internally from the diagram data; any `aspect-ratio` you provide will be overridden. |
 
-function AnimatedDiagram({ id }: { id: string }) {
-  const [diagram, setDiagram] = useState<DiagramExport | null>(null);
+Optional animator parameters (`speed`, `color`, `minWidth`, `maxWidth`) are forwarded as-is to `DiagramAnimator.play()`. Refer to the `@tlberglund/diagram-playback` documentation for their exact semantics and defaults.
 
-  useEffect(() => {
-    fetch(`/api/diagrams/${id}/export`)
-      .then(r => r.json())
-      .then(setDiagram);
-  }, [id]);
+The component renders nothing (`null`) until diagram data is resolved, so there is no flash of an empty canvas during a URL fetch.
 
-  if (!diagram) return null;
+## Sizing
 
-  return <Diagram diagram={diagram} style={{ width: '100%' }} />;
-}
-```
-
-## Responsive Sizing
-
-`<Diagram>` sets `aspect-ratio` on the canvas from `diagram.aspectRatio`. Control width via CSS; height is computed by the browser automatically.
+Set the width of the canvas via `style` or `className`. Height is calculated automatically from the diagram's aspect ratio.
 
 ```tsx
 // Full-width, responsive
-<Diagram diagram={diagram} style={{ width: '100%' }} />
+<Diagram diagram="https://example.com/diagram.json" style={{ width: '100%' }} />
 
 // Fixed width
-<Diagram diagram={diagram} style={{ width: 800 }} />
+<Diagram diagram="https://example.com/diagram.json" style={{ width: 800 }} />
 
 // Tailwind
-<Diagram diagram={diagram} className="w-full max-w-2xl" />
+<Diagram diagram="https://example.com/diagram.json" className="w-full max-w-3xl" />
 ```
 
-## `playOn` Prop
+## Imperative handle (ref)
 
-| Value | Behavior |
-|-------|----------|
-| `"visible"` (default) | Plays once when the canvas first scrolls into view (IntersectionObserver). Falls back to mount if IntersectionObserver is unavailable. |
-| `"mount"` | Plays immediately in a `useEffect` on mount. |
+The component is built with `forwardRef` and exposes a `DiagramHandle`. Use this when you need to trigger or re-trigger playback programmatically rather than relying on scroll visibility or mount timing.
 
-```tsx
-<Diagram playOn="mount" diagram={diagram} style={{ width: '100%' }} />
+```ts
+interface DiagramHandle {
+  play(): void;
+}
 ```
 
-## Imperative Ref
-
-Use a ref to replay the animation programmatically:
+**`play()`** starts the animation immediately, cancelling any animation currently in progress. If the diagram data has not yet loaded (e.g. a URL fetch is still in flight), the call is a no-op.
 
 ```tsx
 import { useRef } from 'react';
-import { Diagram } from 'diagram-react';
-import type { DiagramHandle } from 'diagram-react';
+import { Diagram } from '@tlberglund/diagram-react';
+import type { DiagramHandle } from '@tlberglund/diagram-react';
 
 function Demo() {
   const ref = useRef<DiagramHandle>(null);
@@ -99,7 +83,8 @@ function Demo() {
     <>
       <Diagram
         ref={ref}
-        diagram={diagram}
+        diagram="https://example.com/diagram.json"
+        playOn="mount"
         style={{ width: '100%' }}
       />
       <button onClick={() => ref.current?.play()}>Replay</button>
@@ -108,16 +93,10 @@ function Demo() {
 }
 ```
 
-## Props
+## Build
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `diagram` | `DiagramExport` | required | Pre-loaded diagram from the export endpoint |
-| `speed` | `number` | `1.5` | Speed multiplier |
-| `color` | `string` | `'#1a1a1a'` | Stroke color |
-| `minWidth` | `number` | `1.5` | Minimum stroke width in px |
-| `maxWidth` | `number` | `3` | Maximum stroke width in px |
-| `playOn` | `'visible' \| 'mount'` | `'visible'` | When to trigger animation |
-| `onComplete` | `() => void` | — | Called when animation finishes |
-| `className` | `string` | — | Applied to the canvas element |
-| `style` | `CSSProperties` | — | Applied to the canvas element (merged with `aspect-ratio`) |
+| Script | Output | Description |
+|--------|--------|-------------|
+| `npm run build` | `dist/diagram-react.esm.js` | Bundles `src/index.ts` as an ES module. `react`, `react-dom`, and `@tlberglund/diagram-playback` are externalized and must be present in the consuming project. |
+| `npm run build:types` | `dist/index.d.ts` | Emits TypeScript declaration files only, no JS output. |
+| `npm run watch` | `dist/diagram-react.esm.js` | Same as `build` but watches for file changes and rebuilds automatically. Useful when the package is linked into another project during local development. |
