@@ -27,7 +27,10 @@
       "Bash(npm install:*)",
       "Bash(for dir:*)",
       "Bash(do echo:*)",
-      "Bash(npm whoami *)"
+      "Bash(npm whoami *)",
+      "Read(//Users/tlberglund/websites/timberglund.com/**)",
+      "Bash(bash *)",
+      "Bash([ -d \"/Users/tlberglund/websites/timberglund.com/openspec/specs/$spec\" ])"
     ]
   }
 }
