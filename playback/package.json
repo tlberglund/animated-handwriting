@@ -1,6 +1,6 @@
 {
   "name": "@tlberglund/handwriting-playback",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Handwriting animation playback engine",
   "main": "dist/handwriting-animator.js",
   "module": "dist/handwriting-animator.esm.js",

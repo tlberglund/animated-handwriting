@@ -32,7 +32,8 @@
       "Bash(bash *)",
       "Bash([ -d \"/Users/tlberglund/websites/timberglund.com/openspec/specs/$spec\" ])",
       "Bash(grep -E \"^-.*\\\\.\\(json|yaml|yml\\)$\")",
-      "Bash(xargs ls -lh)"
+      "Bash(xargs ls -lh)",
+      "Skill(opsx:propose)"
     ]
   }
 }

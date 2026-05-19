@@ -1,7 +1,8 @@
-import { GlyphSet, WriteOptions, ExportPoint, ExportCapture, SequencedGlyph, SoundConfig } from './types';
+import { GlyphSet, WriteOptions, ExportPoint, SequencedGlyph, SoundConfig, HandwritingLayout, HandwritingLayoutOptions } from './types';
 import { SoundEngine } from './SoundEngine';
 import { classifyStroke } from './StrokeClassifier';
 import { defaultSounds } from './defaultSounds';
+import { prepareLayout } from './layout';
 
 type ResolvedOptions = Required<Omit<WriteOptions, 'sounds' | 'x' | 'y'>> & { sounds?: SoundConfig; x?: number; y?: number };
 
@@ -22,11 +23,16 @@ export class HandwritingAnimator {
 
    // ── Public API ─────────────────────────────────────────────────────────────
 
-   async write(text: string, options: WriteOptions = {}): Promise<void> {
+   write(text: string, options?: WriteOptions): Promise<void>;
+   write(layout: HandwritingLayout, options?: WriteOptions): Promise<void>;
+   async write(textOrLayout: string | HandwritingLayout, options: WriteOptions = {}): Promise<void> {
       const opts = this.resolveOptions(options);
       if(options.x === undefined && options.y === undefined) this.prepareCanvas(opts);
 
-      const sequence = this.buildSequence(text, opts);
+      const sequence = textOrLayout instanceof HandwritingLayout
+         ? textOrLayout.sequence
+         : this.buildSequence(textOrLayout, opts);
+
       if(sequence.length === 0) return;
 
       if(opts.instant) return this.drawInstant(sequence, opts);
@@ -45,6 +51,10 @@ export class HandwritingAnimator {
       }
 
       return this.animate(sequence, opts, null);
+   }
+
+   prepare(text: string, opts?: HandwritingLayoutOptions): HandwritingLayout {
+      return prepareLayout(this.glyphSet, text, opts);
    }
 
    // ── Options ────────────────────────────────────────────────────────────────
@@ -78,75 +88,15 @@ export class HandwritingAnimator {
       this.ctx.clearRect(0, 0, cssW, cssH);
    }
 
-   // ── Ligature substitution ──────────────────────────────────────────────────
-
-   private tokenize(text: string): string[] {
-      // Build sorted ligature list (longest first for greedy match)
-      const ligatures = Object.keys(this.glyphSet.glyphs)
-         .filter(k => k.length > 1)
-         .sort((a, b) => b.length - a.length);
-
-      const tokens: string[] = [];
-      let i = 0;
-      while(i < text.length) {
-         if(text[i] === ' ') { tokens.push(' '); i++; continue; }
-
-         let matched = false;
-         for(const lig of ligatures) {
-            if(text.startsWith(lig, i)) {
-               tokens.push(lig);
-               i += lig.length;
-               matched = true;
-               break;
-            }
-         }
-         if(!matched) { tokens.push(text[i]); i++; }
-      }
-      return tokens;
-   }
-
    // ── Glyph sequencing ───────────────────────────────────────────────────────
 
    private buildSequence(text: string, opts: ResolvedOptions): SequencedGlyph[] {
-      const tokens   = this.tokenize(text);
-      const sequence: SequencedGlyph[] = [];
-      let xOffset = 0;
-
-      for(const token of tokens) {
-         if(token === ' ') {
-            xOffset += opts.wordGap;
-            continue;
-         }
-
-         const glyph = this.glyphSet.glyphs[token];
-         if(!glyph) {
-            console.warn(`[HandwritingAnimator] No capture for character: "${token}" — skipping`);
-            continue;
-         }
-
-         const capture = this.pickCapture(token, glyph.captures);
-         if(!capture) continue;
-
-         sequence.push({ character: token, capture, xOffset });
-         xOffset += capture.width + opts.letterGap;
-      }
-
-      return sequence;
-   }
-
-   private pickCapture(character: string, captures: ExportCapture[]): ExportCapture | null {
-      if(captures.length === 0) return null;
-      if(captures.length === 1) return captures[0];
-
-      const lastId = this.lastUsedCapture.get(character);
-      const candidates = lastId
-         ? captures.filter(c => c.id !== lastId)
-         : captures;
-
-      const pool    = candidates.length > 0 ? candidates : captures;
-      const chosen  = pool[Math.floor(Math.random() * pool.length)];
-      this.lastUsedCapture.set(character, chosen.id);
-      return chosen;
+      return prepareLayout(
+         this.glyphSet,
+         text,
+         { letterGap: opts.letterGap, wordGap: opts.wordGap },
+         this.lastUsedCapture,
+      ).sequence;
    }
 
    // ── Stroke duration ────────────────────────────────────────────────────────

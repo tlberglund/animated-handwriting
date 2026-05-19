@@ -70,16 +70,87 @@ new HandwritingAnimator(canvas: HTMLCanvasElement, glyphSet: GlyphSet)
 Throws if the canvas cannot produce a 2D rendering context.
 
 #### `write(text, options?): Promise<void>`
+#### `write(layout, options?): Promise<void>`
 
-Animates `text` onto the canvas. Returns a Promise that resolves when the last stroke segment has been drawn. If `instant` is true the Promise resolves after the single-frame synchronous render.
+Animates text onto the canvas. Returns a Promise that resolves when the last stroke segment has been drawn. If `instant` is true the Promise resolves after the single-frame synchronous render.
 
 ```ts
-animator.write(text: string, options: WriteOptions = {}): Promise<void>
+animator.write(text: string, options?: WriteOptions): Promise<void>
+animator.write(layout: HandwritingLayout, options?: WriteOptions): Promise<void>
 ```
 
-Characters missing from the GlyphSet are skipped with a console warning. When the GlyphSet contains multiple captures for the same character, the engine picks one at random, avoiding the same capture twice in a row.
+When called with a **string**, characters missing from the GlyphSet are skipped with a console warning, and the engine picks a random capture for each glyph, avoiding the same capture twice in a row.
+
+When called with a **`HandwritingLayout`**, the pre-resolved captures stored in the layout are used directly — no re-randomization occurs. This is the preferred form when the same text element will be re-rendered multiple times (e.g., during drag or repositioning in a scene graph), as it eliminates per-render flicker.
 
 If `x` and `y` are both omitted, the canvas is reset (dimensions recalculated, pixel ratio applied, previous content cleared) before drawing. When either `x` or `y` is provided the caller is responsible for canvas setup, and the engine draws into the existing canvas state at the given position. This allows multiple `write()` calls to compose independently positioned text onto a single canvas.
+
+#### `prepare(text, options?): HandwritingLayout`
+
+Convenience wrapper around `prepareLayout`. Resolves glyph captures once from the animator's GlyphSet and returns a frozen `HandwritingLayout`. The result can be passed to `write()` as many times as needed.
+
+```ts
+animator.prepare(text: string, options?: HandwritingLayoutOptions): HandwritingLayout
+```
+
+---
+
+---
+
+### `prepareLayout(glyphSet, text, options?): HandwritingLayout`
+
+Standalone function that builds a frozen `HandwritingLayout` without requiring a `HandwritingAnimator` or canvas. Useful when layouts need to be constructed before a renderer is available (e.g., during scene-graph initialization or when loading saved state).
+
+```ts
+import { prepareLayout } from '@tlberglund/handwriting-playback';
+
+const layout = prepareLayout(glyphSet, 'Hello, world', { letterGap: 0.05 });
+// layout.sequence — frozen SequencedGlyph[] with captures already chosen
+// layout.width    — total advance width in cap-height units
+```
+
+Capture selection is randomized once at call time and then locked in. Subsequent renders using this layout always draw the same captures.
+
+---
+
+### `HandwritingLayout`
+
+A frozen layout object produced by `prepareLayout` or `animator.prepare()`.
+
+```ts
+class HandwritingLayout {
+  readonly sequence: SequencedGlyph[];  // one entry per non-space token
+  readonly width: number;               // total advance width in cap-height units
+                                        // (excludes trailing inter-letter gap)
+}
+```
+
+`width` is expressed in cap-height units, so it scales correctly with any `capHeight` value at render time. For example, at `capHeight: 80` a layout with `width: 3.2` spans `3.2 × 80 = 256` CSS pixels.
+
+**Scene graph example:**
+
+```ts
+// Build once — captures randomized here
+const layout = animator.prepare('Hello');
+
+// Render many times as the element is dragged — same captures every time
+function render(x: number, y: number) {
+  animator.write(layout, { x, y, instant: true, capHeight: 80 });
+}
+```
+
+---
+
+### `HandwritingLayoutOptions`
+
+Options accepted by `prepareLayout` and `animator.prepare()`. Contains only the fields that affect layout geometry; all render-time options (color, capHeight, speed, etc.) belong in `WriteOptions` and are supplied at render time.
+
+```ts
+interface HandwritingLayoutOptions {
+  letterGap?: number;  // cap-height units, default 0.05
+  wordGap?:   number;  // cap-height units, default 0.35
+}
+```
 
 ---
 

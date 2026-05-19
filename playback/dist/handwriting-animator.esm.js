@@ -1,3 +1,11 @@
+// src/types.ts
+var HandwritingLayout = class {
+  constructor(sequence, width) {
+    this.sequence = sequence;
+    this.width = width;
+  }
+};
+
 // src/SoundEngine.ts
 var SoundEngine = class {
   constructor(ctx, config) {
@@ -192,6 +200,72 @@ var defaultSounds = {
   scribble: [scribble_01_default, scribble_02_default]
 };
 
+// src/layout.ts
+function tokenize(glyphSet, text) {
+  const ligatures = Object.keys(glyphSet.glyphs).filter((k) => k.length > 1).sort((a, b) => b.length - a.length);
+  const tokens = [];
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === " ") {
+      tokens.push(" ");
+      i++;
+      continue;
+    }
+    let matched = false;
+    for (const lig of ligatures) {
+      if (text.startsWith(lig, i)) {
+        tokens.push(lig);
+        i += lig.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      tokens.push(text[i]);
+      i++;
+    }
+  }
+  return tokens;
+}
+function pickCapture(character, captures, lastUsed) {
+  if (captures.length === 0)
+    return null;
+  if (captures.length === 1)
+    return captures[0];
+  const lastId = lastUsed.get(character);
+  const candidates = lastId ? captures.filter((c) => c.id !== lastId) : captures;
+  const pool = candidates.length > 0 ? candidates : captures;
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  lastUsed.set(character, chosen.id);
+  return chosen;
+}
+function prepareLayout(glyphSet, text, opts, lastUsed) {
+  const letterGap = opts?.letterGap ?? 0.05;
+  const wordGap = opts?.wordGap ?? 0.35;
+  const luc = lastUsed ?? /* @__PURE__ */ new Map();
+  const tokens = tokenize(glyphSet, text);
+  const sequence = [];
+  let xOffset = 0;
+  for (const token of tokens) {
+    if (token === " ") {
+      xOffset += wordGap;
+      continue;
+    }
+    const glyph = glyphSet.glyphs[token];
+    if (!glyph) {
+      console.warn(`[handwriting-playback] No capture for character: "${token}" \u2014 skipping`);
+      continue;
+    }
+    const capture = pickCapture(token, glyph.captures, luc);
+    if (!capture)
+      continue;
+    sequence.push({ character: token, capture, xOffset });
+    xOffset += capture.width + letterGap;
+  }
+  const width = sequence.length > 0 ? xOffset - letterGap : 0;
+  return new HandwritingLayout(sequence, width);
+}
+
 // src/HandwritingAnimator.ts
 var HandwritingAnimator = class {
   constructor(canvas, glyphSet) {
@@ -204,12 +278,11 @@ var HandwritingAnimator = class {
       throw new Error("Could not get 2d context from canvas");
     this.ctx = ctx;
   }
-  // ── Public API ─────────────────────────────────────────────────────────────
-  async write(text, options = {}) {
+  async write(textOrLayout, options = {}) {
     const opts = this.resolveOptions(options);
     if (options.x === void 0 && options.y === void 0)
       this.prepareCanvas(opts);
-    const sequence = this.buildSequence(text, opts);
+    const sequence = textOrLayout instanceof HandwritingLayout ? textOrLayout.sequence : this.buildSequence(textOrLayout, opts);
     if (sequence.length === 0)
       return;
     if (opts.instant)
@@ -227,6 +300,9 @@ var HandwritingAnimator = class {
       return this.animate(sequence, opts, soundEngine);
     }
     return this.animate(sequence, opts, null);
+  }
+  prepare(text, opts) {
+    return prepareLayout(this.glyphSet, text, opts);
   }
   // ── Options ────────────────────────────────────────────────────────────────
   resolveOptions(options) {
@@ -255,67 +331,14 @@ var HandwritingAnimator = class {
     this.ctx.scale(opts.scale, opts.scale);
     this.ctx.clearRect(0, 0, cssW, cssH);
   }
-  // ── Ligature substitution ──────────────────────────────────────────────────
-  tokenize(text) {
-    const ligatures = Object.keys(this.glyphSet.glyphs).filter((k) => k.length > 1).sort((a, b) => b.length - a.length);
-    const tokens = [];
-    let i = 0;
-    while (i < text.length) {
-      if (text[i] === " ") {
-        tokens.push(" ");
-        i++;
-        continue;
-      }
-      let matched = false;
-      for (const lig of ligatures) {
-        if (text.startsWith(lig, i)) {
-          tokens.push(lig);
-          i += lig.length;
-          matched = true;
-          break;
-        }
-      }
-      if (!matched) {
-        tokens.push(text[i]);
-        i++;
-      }
-    }
-    return tokens;
-  }
   // ── Glyph sequencing ───────────────────────────────────────────────────────
   buildSequence(text, opts) {
-    const tokens = this.tokenize(text);
-    const sequence = [];
-    let xOffset = 0;
-    for (const token of tokens) {
-      if (token === " ") {
-        xOffset += opts.wordGap;
-        continue;
-      }
-      const glyph = this.glyphSet.glyphs[token];
-      if (!glyph) {
-        console.warn(`[HandwritingAnimator] No capture for character: "${token}" \u2014 skipping`);
-        continue;
-      }
-      const capture = this.pickCapture(token, glyph.captures);
-      if (!capture)
-        continue;
-      sequence.push({ character: token, capture, xOffset });
-      xOffset += capture.width + opts.letterGap;
-    }
-    return sequence;
-  }
-  pickCapture(character, captures) {
-    if (captures.length === 0)
-      return null;
-    if (captures.length === 1)
-      return captures[0];
-    const lastId = this.lastUsedCapture.get(character);
-    const candidates = lastId ? captures.filter((c) => c.id !== lastId) : captures;
-    const pool = candidates.length > 0 ? candidates : captures;
-    const chosen = pool[Math.floor(Math.random() * pool.length)];
-    this.lastUsedCapture.set(character, chosen.id);
-    return chosen;
+    return prepareLayout(
+      this.glyphSet,
+      text,
+      { letterGap: opts.letterGap, wordGap: opts.wordGap },
+      this.lastUsedCapture
+    ).sequence;
   }
   // ── Stroke duration ────────────────────────────────────────────────────────
   meanStrokeDuration(sequence, speed) {
@@ -456,6 +479,8 @@ var HandwritingAnimator = class {
 };
 export {
   HandwritingAnimator,
+  HandwritingLayout,
   SoundEngine,
-  defaultSounds
+  defaultSounds,
+  prepareLayout
 };

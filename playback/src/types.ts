@@ -96,3 +96,20 @@ export interface SequencedGlyph {
    capture: ExportCapture;
    xOffset: number;   // in cap-height units from origin
 }
+
+// ── Layout types ──────────────────────────────────────────────────────────────
+
+export interface HandwritingLayoutOptions {
+   /** Gap between letters in cap-height units. Default 0.05 */
+   letterGap?: number;
+   /** Gap between words (space character) in cap-height units. Default 0.35 */
+   wordGap?: number;
+}
+
+export class HandwritingLayout {
+   constructor(
+      readonly sequence: SequencedGlyph[],
+      /** Total advance width in cap-height units (excludes trailing gap) */
+      readonly width: number,
+   ) {}
+}
